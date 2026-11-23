@@ -2,7 +2,7 @@
 
 🌐 **No ar:** https://maya-souza-nails.onrender.com · Painel: https://maya-souza-nails.onrender.com/admin
 
-O Render publica sozinho cada novo commit no branch `claude/manicure-scheduling-site-py7593`.
+Os agendamentos ficam guardados num banco PostgreSQL grátis do Neon. Para publicar uma atualização: `git push` e depois `scripts/deploy.sh`.
 
 Site para manicure com:
 
