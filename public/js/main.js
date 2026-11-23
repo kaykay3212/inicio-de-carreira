@@ -7,7 +7,7 @@ const dataLonga = (iso) =>
 const linkWhats = (numero, texto) => `https://wa.me/${numero}${texto ? '?text=' + encodeURIComponent(texto) : ''}`;
 const menosMovimento = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const ICONES = { mao: '💅', pe: '🦶', 'pe-mao': '✨', gel: '💎', alongamento: '🌸', manutencao: '🔁', 'nail-art': '🎨' };
+const ICONES = { alongamento: '🌸', gel: '💎', 'manutencao-retorno': '🔁', manutencao: '✨' };
 
 function el(tag, attrs = {}, ...filhos) {
   const e = document.createElement(tag);
@@ -242,9 +242,9 @@ function brilhos() {
   document.title = `${config.nome} | Agende seu horário`;
   $$('[data-nome]').forEach((e) => (e.textContent = config.nome));
   $('[data-slogan]').textContent = config.slogan;
-  $('[data-endereco]').textContent = config.endereco;
+  $('[data-endereco]').textContent = config.endereco || `@${config.instagram}`;
   $('#ano').textContent = new Date().getFullYear();
-  const whats = linkWhats(config.whatsapp, `Olá! Vim pelo site do ${config.nome} 💅`);
+  const whats = linkWhats(config.whatsapp, `Olá! Vim pelo seu site e quero agendar um horário 💅`);
   $$('[data-whats]').forEach((a) => (a.href = whats));
   $('#link-insta').href = `https://instagram.com/${config.instagram}`;
 

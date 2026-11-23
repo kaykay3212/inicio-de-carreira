@@ -2,13 +2,14 @@
 //  CONFIGURAÇÕES DO STUDIO — edite aqui nome, contatos, horários e serviços
 // =====================================================================
 module.exports = {
-  nome: 'Studio Bella Unhas',
+  nome: 'Maya Souza Nails',
   slogan: 'Unhas impecáveis, do jeitinho que você sonhou 💅',
 
   // WhatsApp com DDI + DDD, só números (ex.: 5511987654321)
-  whatsapp: '5511999999999',
-  instagram: 'seu.instagram',
-  endereco: 'Rua Exemplo, 123 - Centro, Sua Cidade',
+  whatsapp: '5549988299621',
+  instagram: 'Maya_souza__',
+  // Endereço que aparece no rodapé (deixe vazio '' para não mostrar)
+  endereco: '',
 
   // Fuso horário usado para saber "que horas são agora" no studio
   fusoHorario: 'America/Sao_Paulo',
@@ -39,12 +40,9 @@ module.exports = {
 
   // Serviços: duração em minutos, preço em reais
   servicos: [
-    { id: 'mao', nome: 'Manicure', descricao: 'Cutilagem, lixamento e esmaltação tradicional.', preco: 35, duracao: 45 },
-    { id: 'pe', nome: 'Pedicure', descricao: 'Cuidado completo dos pés com esmaltação.', preco: 40, duracao: 60 },
-    { id: 'pe-mao', nome: 'Pé + Mão', descricao: 'O combo completo pra você sair renovada.', preco: 70, duracao: 90 },
-    { id: 'gel', nome: 'Esmaltação em Gel', descricao: 'Brilho intenso e durabilidade de até 3 semanas.', preco: 60, duracao: 60 },
-    { id: 'alongamento', nome: 'Alongamento em Fibra/Gel', descricao: 'Unhas longas, resistentes e naturais.', preco: 150, duracao: 150 },
-    { id: 'manutencao', nome: 'Manutenção de Alongamento', descricao: 'Manutenção do alongamento (até 21 dias).', preco: 90, duracao: 90 },
-    { id: 'nail-art', nome: 'Nail Art (adicional)', descricao: 'Decoração personalizada: francesinha, desenhos, pedrarias.', preco: 20, duracao: 30 },
+    { id: 'alongamento', nome: 'Alongamento Soft Gel', descricao: 'Unhas longas, leves e resistentes com acabamento natural.', preco: 130, duracao: 120 },
+    { id: 'gel', nome: 'Esmaltação em Gel', descricao: 'Brilho intenso que dura muito mais que o esmalte comum.', preco: 80, duracao: 60 },
+    { id: 'manutencao-retorno', nome: 'Manutenção “Retorno”', descricao: 'Retorno para manutenção do seu alongamento.', preco: 65, duracao: 60 },
+    { id: 'manutencao', nome: 'Manutenção', descricao: 'Manutenção completa do alongamento.', preco: 95, duracao: 90 },
   ],
 };
