@@ -8,3 +8,4 @@
 - Sem `DATABASE_URL` (ex.: rodando localmente), os agendamentos vão para `data/agendamentos.json`.
 - Textos e comunicação com a dona do site em português do Brasil.
 - O servidor se mantém acordado das 07:00 às 22:00 (`manterAcordado` em `src/config.js`), visitando o próprio `/healthz` a cada 10 min. Não ampliar para 24h: a cota grátis do Render (750 h/mês) é compartilhada com o serviço `nexus-finance` da mesma conta. Não pingar o banco (Neon grátis tem cota de horas de computação).
+- De manhã, a tarefa do GitHub Actions `.github/workflows/acordar-site.yml` (no branch `main`, que é onde o GitHub roda tarefas agendadas) visita o site entre 06:40 e 07:20 de Brasília para ele já estar acordado.
