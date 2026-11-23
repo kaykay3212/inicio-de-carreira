@@ -12,6 +12,19 @@
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="icone-whats" viewBox="0 0 32 32"><path fill="currentColor" d="M16 3C8.8 3 3 8.7 3 15.8c0 2.5.7 4.9 2 7L3 29l6.4-2c2 1.1 4.3 1.7 6.6 1.7 7.2 0 13-5.7 13-12.8S23.2 3 16 3zm0 23.4c-2.1 0-4.2-.6-6-1.7l-.4-.3-3.8 1.2 1.2-3.7-.3-.4c-1.2-1.8-1.8-3.9-1.8-6 0-5.9 4.9-10.7 11-10.7s11 4.8 11 10.7-4.9 10.9-10.9 10.9zm6-8c-.3-.2-1.9-.9-2.2-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-1 1.2-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.6-1.6-1-.9-1.6-1.9-1.8-2.2-.2-.3 0-.5.1-.7l.5-.6c.2-.2.2-.3.3-.6.1-.2 0-.4 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.1-1.2 2.7s1.2 3.2 1.4 3.4c.2.2 2.4 3.6 5.8 5 .8.3 1.4.5 1.9.7.8.3 1.5.2 2.1.1.6-.1 1.9-.8 2.2-1.5.3-.7.3-1.4.2-1.5-.1-.3-.3-.4-.6-.5z"/></symbol>
+  </svg>
+
+  <!-- abertura animada (vidro de esmalte pingando) -->
+  <div class="abertura" id="abertura" aria-hidden="true">
+    <div class="abertura__esmalte">
+      <span class="abertura__tampa"></span>
+      <span class="abertura__vidro"><i></i></span>
+    </div>
+    <span class="abertura__gota"></span>
+  </div>
+
   <div class="progresso-scroll" id="progresso-scroll"></div>
 
   <header class="topo" id="topo">
@@ -19,20 +32,34 @@
       <a href="#inicio" class="logo"><span class="logo__ponto"></span><span data-nome>Studio</span></a>
       <nav class="menu" id="menu">
         <a href="#trabalhos">Trabalhos</a>
+        <a href="#como-funciona">Como funciona</a>
         <a href="#servicos">Serviços</a>
         <a href="#agendar">Agendar</a>
         <span class="menu__indicador" id="menu-indicador"></span>
       </nav>
-      <a href="#agendar" class="botao botao--pequeno botao--brilho">Agendar</a>
+      <a href="#agendar" class="botao botao--pequeno botao--brilho topo__cta">Agendar</a>
+      <button class="menu-botao" id="menu-botao" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu-mobile">
+        <span></span><span></span>
+      </button>
     </div>
   </header>
+
+  <!-- menu do celular -->
+  <div class="menu-mobile" id="menu-mobile" hidden>
+    <nav>
+      <a href="#inicio"><small>01</small>Início</a>
+      <a href="#trabalhos"><small>02</small>Trabalhos</a>
+      <a href="#como-funciona"><small>03</small>Como funciona</a>
+      <a href="#servicos"><small>04</small>Serviços</a>
+      <a href="#agendar"><small>05</small>Agendar horário</a>
+    </nav>
+    <a class="botao botao--whats menu-mobile__whats" data-whats target="_blank" rel="noopener">Falar no WhatsApp</a>
+  </div>
 
   <main>
     <!-- HERO -->
     <section id="inicio" class="hero">
-      <div class="hero__aurora" aria-hidden="true">
-        <span></span><span></span><span></span>
-      </div>
+      <div class="hero__aurora" aria-hidden="true"><span></span><span></span><span></span></div>
       <canvas class="hero__brilhos" id="brilhos" aria-hidden="true"></canvas>
 
       <div class="container hero__conteudo">
@@ -47,10 +74,11 @@
             <a href="#agendar" class="botao botao--brilho">Agendar meu horário <span class="seta">→</span></a>
             <a href="#trabalhos" class="botao botao--vidro">Ver trabalhos</a>
           </div>
-          <ul class="hero__selos revelar">
-            <li><strong>⏱</strong> Agendamento em 1 minuto</li>
-            <li><strong>✦</strong> Produtos de qualidade</li>
-          </ul>
+          <dl class="numeros revelar" id="numeros">
+            <div><dt data-contar="servicos">0</dt><dd>serviços</dd></div>
+            <div><dt data-contar="fotos">0</dt><dd>trabalhos no portfólio</dd></div>
+            <div><dt><small>R$</small> <span data-contar="preco">0</span></dt><dd>a partir de</dd></div>
+          </dl>
         </div>
 
         <div class="hero__fotos" id="hero-fotos" aria-hidden="true">
@@ -66,54 +94,83 @@
       <a href="#trabalhos" class="hero__rolar" aria-label="Rolar para os trabalhos"><span></span></a>
     </section>
 
-    <!-- FAIXA ANIMADA -->
-    <div class="faixa" aria-hidden="true">
-      <div class="faixa__trilho" id="faixa"></div>
-    </div>
-
     <!-- GALERIA -->
     <section id="trabalhos" class="secao">
       <div class="container">
-        <div class="secao__cabecalho revelar">
-          <span class="etiqueta">Portfólio</span>
-          <h2>Unhas que já <em>passaram por aqui</em></h2>
-          <p class="secao__sub">Inspire-se e escolha o seu estilo. Toque na foto para ampliar.</p>
+        <div class="secao__cabecalho">
+          <span class="etiqueta revelar">Portfólio</span>
+          <h2 class="titulo-secao">Unhas que já <em>passaram por aqui</em></h2>
+          <p class="secao__sub revelar">Toque em uma foto para ampliar. Gostou? Toque em <strong>“Quero esse estilo”</strong> e ele já vai anotado no seu agendamento.</p>
         </div>
         <div class="galeria" id="galeria"></div>
       </div>
     </section>
 
-    <!-- SERVIÇOS -->
-    <section id="servicos" class="secao secao--destaque">
+    <!-- COMO FUNCIONA -->
+    <section id="como-funciona" class="secao secao--destaque">
       <div class="container">
-        <div class="secao__cabecalho revelar">
-          <span class="etiqueta">Serviços</span>
-          <h2>Cuidados para <em>todos os estilos</em></h2>
+        <div class="secao__cabecalho secao__cabecalho--centro">
+          <span class="etiqueta revelar">Simples assim</span>
+          <h2 class="titulo-secao">Como <em>funciona</em></h2>
+        </div>
+        <ol class="como" id="como">
+          <i class="como__linha" aria-hidden="true"><i></i></i>
+          <li class="revelar">
+            <span class="como__icone">💅</span>
+            <h3>Escolha o serviço</h3>
+            <p>Veja os trabalhos, os preços e escolha o que combina com você.</p>
+          </li>
+          <li class="revelar" style="--atraso: .15s">
+            <span class="como__icone">📅</span>
+            <h3>Marque dia e hora</h3>
+            <p>Só aparecem os horários livres de verdade. Sem troca de mensagens.</p>
+          </li>
+          <li class="revelar" style="--atraso: .3s">
+            <span class="como__icone">✨</span>
+            <h3>É só vir e brilhar</h3>
+            <p>Você recebe a confirmação e pode avisar pelo WhatsApp com um toque.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- SERVIÇOS -->
+    <section id="servicos" class="secao">
+      <div class="container">
+        <div class="secao__cabecalho">
+          <span class="etiqueta revelar">Serviços</span>
+          <h2 class="titulo-secao">Cuidados para <em>todos os estilos</em></h2>
+          <p class="secao__sub revelar">Toque em um serviço para já começar o agendamento.</p>
         </div>
         <div class="servicos" id="lista-servicos"></div>
       </div>
     </section>
 
     <!-- AGENDAMENTO -->
-    <section id="agendar" class="secao">
+    <section id="agendar" class="secao secao--destaque">
       <div class="container container--estreito">
-        <div class="secao__cabecalho revelar">
-          <span class="etiqueta">Agendamento online</span>
-          <h2>Reserve seu <em>horário</em></h2>
-          <p class="secao__sub">Escolha o serviço, o dia e o horário. Rapidinho! 💖</p>
+        <div class="secao__cabecalho secao__cabecalho--centro">
+          <span class="etiqueta revelar">Agendamento online</span>
+          <h2 class="titulo-secao">Reserve seu <em>horário</em></h2>
+          <p class="secao__sub revelar">Leva menos de 1 minuto. 💖</p>
         </div>
 
         <form id="form-agendamento" class="cartao agendamento revelar" novalidate>
           <ol class="etapas" id="etapas" aria-hidden="true">
+            <i class="etapas__barra" id="etapas-barra"></i>
             <li class="ativa"><span>1</span>Serviço</li>
             <li><span>2</span>Dia</li>
             <li><span>3</span>Horário</li>
             <li><span>4</span>Dados</li>
-            <i class="etapas__barra" id="etapas-barra"></i>
           </ol>
 
-          <div class="passo">
+          <div class="passo" id="passo-servico">
             <h3><span class="passo__num">1</span> Qual serviço?</h3>
+            <div class="escolhido" id="servico-escolhido" hidden>
+              <span class="escolhido__icone" id="escolhido-icone"></span>
+              <div class="escolhido__texto"><strong id="escolhido-nome"></strong><small id="escolhido-info"></small></div>
+              <button type="button" class="escolhido__trocar" id="trocar-servico">Trocar</button>
+            </div>
             <div class="opcoes-servico" id="opcoes-servico"></div>
           </div>
 
@@ -128,7 +185,7 @@
 
           <div class="passo" id="passo-hora" hidden>
             <h3><span class="passo__num">3</span> Qual horário?</h3>
-            <div class="horas" id="horas"></div>
+            <div id="horas"></div>
           </div>
 
           <div class="passo" id="passo-dados" hidden>
@@ -137,14 +194,16 @@
               <label class="campo">
                 <input type="text" name="nome" autocomplete="name" maxlength="80" required placeholder=" " />
                 <span>Seu nome</span>
+                <i class="campo__ok" aria-hidden="true">✓</i>
               </label>
               <label class="campo">
                 <input type="tel" name="telefone" autocomplete="tel" inputmode="tel" required placeholder=" " />
                 <span>WhatsApp com DDD</span>
+                <i class="campo__ok" aria-hidden="true">✓</i>
               </label>
               <label class="campo campos__inteiro">
                 <textarea name="observacoes" rows="2" maxlength="300" placeholder=" "></textarea>
-                <span>Observações (opcional) — ex.: quero francesinha com glitter ✨</span>
+                <span>Observações (opcional)</span>
               </label>
             </div>
             <div class="resumo" id="resumo"></div>
@@ -174,23 +233,37 @@
         <p data-endereco></p>
       </div>
       <div class="rodape__links">
-        <a id="link-whats" target="_blank" rel="noopener">WhatsApp</a>
+        <a data-whats target="_blank" rel="noopener">WhatsApp</a>
         <a id="link-insta" target="_blank" rel="noopener">Instagram</a>
       </div>
     </div>
     <p class="rodape__copy">© <span id="ano"></span> <span data-nome></span>. Feito com carinho.</p>
   </footer>
 
-  <a class="whats-flutuante" id="whats-flutuante" target="_blank" rel="noopener" aria-label="Falar no WhatsApp">
-    <svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor" aria-hidden="true"><path d="M16 3C8.8 3 3 8.7 3 15.8c0 2.5.7 4.9 2 7L3 29l6.4-2c2 1.1 4.3 1.7 6.6 1.7 7.2 0 13-5.7 13-12.8S23.2 3 16 3zm0 23.4c-2.1 0-4.2-.6-6-1.7l-.4-.3-3.8 1.2 1.2-3.7-.3-.4c-1.2-1.8-1.8-3.9-1.8-6 0-5.9 4.9-10.7 11-10.7s11 4.8 11 10.7-4.9 10.9-10.9 10.9zm6-8c-.3-.2-1.9-.9-2.2-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-1 1.2-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.6-1.6-1-.9-1.6-1.9-1.8-2.2-.2-.3 0-.5.1-.7l.5-.6c.2-.2.2-.3.3-.6.1-.2 0-.4 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.1-1.2 2.7s1.2 3.2 1.4 3.4c.2.2 2.4 3.6 5.8 5 .8.3 1.4.5 1.9.7.8.3 1.5.2 2.1.1.6-.1 1.9-.8 2.2-1.5.3-.7.3-1.4.2-1.5-.1-.3-.3-.4-.6-.5z"/></svg>
+  <!-- WhatsApp flutuante (computador) -->
+  <a class="whats-flutuante" data-whats target="_blank" rel="noopener" aria-label="Falar no WhatsApp">
+    <svg width="28" height="28" aria-hidden="true"><use href="#icone-whats" /></svg>
   </a>
+
+  <!-- barra fixa no celular -->
+  <div class="barra-celular" id="barra-celular">
+    <a href="#agendar" class="botao botao--brilho">Agendar horário</a>
+    <a class="barra-celular__whats" data-whats target="_blank" rel="noopener" aria-label="Falar no WhatsApp">
+      <svg width="24" height="24" aria-hidden="true"><use href="#icone-whats" /></svg>
+    </a>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
 
   <div class="lightbox" id="lightbox" hidden>
     <button class="lightbox__fechar" type="button" aria-label="Fechar">×</button>
     <button class="lightbox__nav lightbox__nav--ant" type="button" aria-label="Anterior">‹</button>
     <figure>
       <img alt="" />
-      <figcaption></figcaption>
+      <figcaption>
+        <span class="lightbox__legenda"></span>
+        <button type="button" class="botao botao--brilho botao--pequeno" id="quero-estilo">Quero esse estilo ✨</button>
+      </figcaption>
     </figure>
     <button class="lightbox__nav lightbox__nav--prox" type="button" aria-label="Próxima">›</button>
     <div class="lightbox__contador"></div>
