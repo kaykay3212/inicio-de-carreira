@@ -22,11 +22,10 @@ Site para manicure com:
 
 ### Colocando as fotos das unhas
 
-1. Apague as ilustrações de exemplo (`.svg`) da pasta `public/img/galeria/`.
-2. Coloque suas fotos (`.jpg`, `.png` ou `.webp`) nessa pasta.
-3. **O nome do arquivo vira a legenda**: `01-francesinha-rosa.jpg` aparece como "Francesinha rosa".
+1. Coloque suas fotos (`.jpg`, `.png` ou `.webp`) na pasta `public/img/galeria/` (para tirar uma foto do site, é só apagar o arquivo).
+2. **O nome do arquivo vira a legenda**: `01-francesinha-rosa.jpg` aparece como "Francesinha rosa".
    O número no começo serve só para definir a ordem (as 3 primeiras aparecem também no topo do site).
-4. Dica: use fotos em pé (retrato) e com até ~500 KB cada para o site ficar rápido.
+3. Dica: use fotos em pé (retrato) e com até ~500 KB cada para o site ficar rápido.
 
 ## Rodando no computador
 
