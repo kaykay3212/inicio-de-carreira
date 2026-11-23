@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d0d12">
+<title>Radar de Seguidores</title>
+<style>
+  :root{
+    --bg:#0d0d12; --card:#17171f; --card2:#1f1f2a; --line:#2a2a37;
+    --text:#f3f3f7; --muted:#9a9aab; --accent:#ff4f8b; --accent2:#8b5cf6; --warn:#ffb020; --ok:#2ecc8f; --bad:#ff5a5f;
+    --grad:linear-gradient(135deg,#ffcf4a 0%,#ff4f8b 50%,#8b5cf6 100%);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif}
+  body{padding:16px 16px 90px;max-width:760px;margin:0 auto}
+  h1,h2,h3{margin:0}
+  button{font:inherit;color:inherit;cursor:pointer}
+  .hidden{display:none!important}
+  header{display:flex;align-items:center;gap:12px;margin:4px 0 18px}
+  .logo{width:44px;height:44px;border-radius:12px;background:#111118;display:grid;place-items:center;border:1px solid var(--line)}
+  header h1{font-size:20px;letter-spacing:-.2px}
+  header p{margin:0;color:var(--muted);font-size:13px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
+  .grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .btn{border:0;border-radius:12px;padding:12px 16px;background:var(--card2);border:1px solid var(--line);font-weight:600}
+  .btn.primary{background:var(--grad);border:0;color:#fff}
+  .btn.small{padding:7px 11px;font-size:13px;border-radius:10px}
+  .btn.ghost{background:transparent}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .drop{border:2px dashed var(--line);border-radius:16px;padding:22px;text-align:center;transition:.15s}
+  .drop.over{border-color:var(--accent);background:#ff4f8b10}
+  .drop input{display:none}
+  .muted{color:var(--muted)}
+  .small{font-size:13px}
+  ol.steps{padding-left:20px;margin:8px 0 0}
+  ol.steps li{margin:6px 0}
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  @media(min-width:600px){.stats{grid-template-columns:repeat(3,1fr)}}
+  .stat{background:var(--card2);border:1px solid var(--line);border-radius:16px;padding:14px;text-align:left;width:100%}
+  .stat .n{font-size:26px;font-weight:800;letter-spacing:-.5px}
+  .stat .l{font-size:12.5px;color:var(--muted)}
+  .stat.hl{border-color:#ff4f8b66}
+  .stat.active{outline:2px solid var(--accent)}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:700}
+  .pill.bad{background:#ff5a5f22;color:var(--bad)}
+  .pill.ok{background:#2ecc8f22;color:var(--ok)}
+  .pill.neutral{background:#ffffff14;color:var(--muted)}
+  .tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{white-space:nowrap;border:1px solid var(--line);background:var(--card2);border-radius:999px;padding:7px 12px;font-size:13px}
+  .tab.on{background:var(--text);color:#111;border-color:var(--text);font-weight:700}
+  .search{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 12px;color:var(--text);font:inherit;margin-bottom:10px}
+  .list{list-style:none;margin:0;padding:0}
+  .item{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line)}
+  .item:last-child{border-bottom:0}
+  .av{width:40px;height:40px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:800;color:#fff;font-size:15px}
+  .who{flex:1;min-width:0}
+  .who a{color:var(--text);text-decoration:none;font-weight:600;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .who .d{font-size:12px;color:var(--muted)}
+  .acts{display:flex;gap:6px}
+  .icon-btn{background:var(--card2);border:1px solid var(--line);border-radius:10px;width:34px;height:34px;display:grid;place-items:center;padding:0}
+  .icon-btn.on{color:var(--warn);border-color:#ffb02066}
+  .empty{text-align:center;padding:26px 8px;color:var(--muted)}
+  .bar{height:8px;border-radius:99px;background:var(--card2);overflow:hidden;margin-top:6px}
+  .bar>i{display:block;height:100%;background:var(--grad)}
+  .kv{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)}
+  .kv:last-child{border-bottom:0}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#fff;color:#111;padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;box-shadow:0 6px 30px #0008;z-index:50}
+  .modal-bg{position:fixed;inset:0;background:#000a;display:grid;place-items:center;z-index:40;padding:16px}
+  .modal{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;max-width:420px;width:100%}
+  textarea{width:100%;min-height:120px;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px;font:12px ui-monospace,monospace}
+  .snap{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .snap:last-child{border-bottom:0}
+  details summary{cursor:pointer;font-weight:600}
+  .note{background:#8b5cf614;border:1px solid #8b5cf644;border-radius:12px;padding:10px 12px;font-size:13px}
+  .more{display:block;margin:10px auto 0}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo" aria-hidden="true">
+    <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+      <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffcf4a"/><stop offset=".5" stop-color="#ff4f8b"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>
+      <circle cx="16" cy="16" r="13" stroke="url(#lg)" stroke-width="2.5"/>
+      <circle cx="16" cy="16" r="7.5" stroke="url(#lg)" stroke-width="2" opacity=".7"/>
+      <path d="M16 16 L26 9" stroke="url(#lg)" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="16" cy="16" r="2.4" fill="#ff4f8b"/>
+    </svg>
+  </div>
+  <div>
+    <h1>Radar <span class="grad-text">de Seguidores</span></h1>
+    <p>Unfollowers e insights · 100% local, sem login</p>
+  </div>
+</header>
+
+<!-- IMPORTAR -->
+<section id="importCard" class="card">
+  <h2 style="font-size:17px;margin-bottom:10px">Importar dados do Instagram</h2>
+  <label class="drop" id="drop">
+    <input id="fileInput" type="file" multiple accept=".zip,.json,.html,application/zip,application/json,text/html">
+    <div style="font-size:30px">📦</div>
+    <div style="font-weight:700;margin:4px 0">Toque para escolher o arquivo</div>
+    <div class="muted small">ZIP da exportação do Instagram, ou os arquivos <code>followers_1.json</code> e <code>following.json</code></div>
+  </label>
+  <div class="row" style="margin-top:12px">
+    <button class="btn small ghost" id="demoBtn">Testar com dados de exemplo</button>
+    <button class="btn small ghost" id="restoreBtn">Restaurar backup</button>
+  </div>
+  <details style="margin-top:14px">
+    <summary>Como baixar meus dados (grátis, ~2 min)</summary>
+    <ol class="steps small">
+      <li>No app do Instagram: <b>Perfil → ☰ → Central de Contas</b>.</li>
+      <li><b>Suas informações e permissões → Baixar suas informações</b>.</li>
+      <li><b>Baixar ou transferir informações</b> → escolha sua conta → <b>Algumas das suas informações</b>.</li>
+      <li>Marque só <b>Seguidores e seguindo</b> (fica pequeno e chega rápido).</li>
+      <li><b>Baixar no dispositivo</b> → Período: <b>Todo o período</b> → Formato: <b>JSON</b> → Criar arquivos.</li>
+      <li>Quando o e-mail chegar (minutos), baixe o ZIP e escolha ele aqui.</li>
+    </ol>
+    <p class="note" style="margin-top:10px">💡 Para ver <b>quem deixou de te seguir</b>, importe uma exportação nova de tempos em tempos (ex.: toda semana). O app guarda cada importação e compara com a anterior.</p>
+  </details>
+</section>
+
+<!-- DASHBOARD -->
+<section id="dash" class="hidden">
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div>
+        <div class="muted small" id="snapLabel"></div>
+        <div style="font-weight:700" id="compareLabel"></div>
+      </div>
+      <button class="btn small" id="newImportBtn">+ Nova importação</button>
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="tabs" id="tabs"></div>
+    <input class="search" id="search" placeholder="Buscar @usuário" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <div class="row" style="justify-content:space-between;margin-bottom:6px">
+      <span class="muted small" id="listInfo"></span>
+      <div class="row">
+        <select id="sort" class="btn small" style="padding:6px 8px;color:var(--text);background:var(--card2)">
+          <option value="new">Mais recentes</option>
+          <option value="old">Mais antigos</option>
+          <option value="az">A → Z</option>
+        </select>
+        <button class="btn small" id="copyListBtn">Copiar lista</button>
+      </div>
+    </div>
+    <ul class="list" id="list"></ul>
+    <button class="btn small more hidden" id="moreBtn">Mostrar mais</button>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size:16px;margin-bottom:8px">Insights</h3>
+    <div id="insights"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size:16px;margin-bottom:6px">Histórico de importações</h3>
+    <div class="muted small" id="storageInfo" style="margin-bottom:6px"></div>
+    <div id="snaps"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn small" id="backupBtn">Fazer backup</button>
+      <button class="btn small ghost" id="restoreBtn2">Restaurar backup</button>
+      <button class="btn small ghost" id="wipeBtn" style="color:var(--bad)">Apagar tudo</button>
+    </div>
+  </div>
+</section>
+
+<div id="modalRoot"></div>
+<div id="toast" class="toast hidden"></div>
+
+<script>
+"use strict";
+/* ========== Utilidades ========== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDate = ts => ts ? new Date(ts*1000).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}) : '';
+const fmtDateTime = ms => new Date(ms).toLocaleString('pt-BR',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+const USER_RE = /^[a-z0-9._]{1,30}$/;
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.remove('hidden');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.add('hidden'),2200);}
+function hue(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))>>>0;return h%360;}
+
+/* Instagram às vezes exporta texto UTF-8 como latin1 escapado (ex.: "Ã©"). Corrige. */
+function fixMojibake(s){
+  if(typeof s!=='string' || !/[À-ÿ]/.test(s)) return s;
+  try{ const b=Uint8Array.from(s,c=>c.charCodeAt(0)&255); return new TextDecoder('utf-8',{fatal:true}).decode(b);}catch{ return s; }
+}
+
+/* ========== Leitor de ZIP (sem bibliotecas) ========== */
+async function readZip(file){
+  const buf = new Uint8Array(await file.arrayBuffer());
+  const dv = new DataView(buf.buffer);
+  let eocd=-1;
+  for(let i=buf.length-22;i>=Math.max(0,buf.length-65557);i--){ if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;} }
+  if(eocd<0) throw new Error('ZIP inválido');
+  const count=dv.getUint16(eocd+10,true); let p=dv.getUint32(eocd+16,true);
+  const entries=[]; const dec=new TextDecoder();
+  for(let i=0;i<count;i++){
+    if(dv.getUint32(p,true)!==0x02014b50) break;
+    const method=dv.getUint16(p+10,true), csize=dv.getUint32(p+20,true);
+    const nlen=dv.getUint16(p+28,true), elen=dv.getUint16(p+30,true), clen=dv.getUint16(p+32,true);
+    const off=dv.getUint32(p+42,true);
+    const name=dec.decode(buf.subarray(p+46,p+46+nlen));
+    entries.push({name,method,csize,off}); p+=46+nlen+elen+clen;
+  }
+  return {
+    names: entries.map(e=>e.name),
+    async text(name){
+      const e=entries.find(x=>x.name===name); if(!e) return null;
+      const lnl=dv.getUint16(e.off+26,true), lel=dv.getUint16(e.off+28,true);
+      const data=buf.subarray(e.off+30+lnl+lel, e.off+30+lnl+lel+e.csize);
+      if(e.method===0) return dec.decode(data);
+      if(e.method!==8) throw new Error('Compressão não suportada');
+      const ds=new DecompressionStream('deflate-raw');
+      const out=await new Response(new Blob([data]).stream().pipeThrough(ds)).arrayBuffer();
+      return dec.decode(out);
+    }
+  };
+}
+
+/* ========== Parser da exportação do Instagram ========== */
+function userFromHref(h){ const m=/instagram\.com\/(?:_u\/)?([A-Za-z0-9._]+)/.exec(h||''); return m?m[1]:''; }
+function pickEntries(json){
+  if(Array.isArray(json)) return json;
+  if(json && typeof json==='object'){ for(const k of Object.keys(json)) if(Array.isArray(json[k])) return json[k]; }
+  return [];
+}
+function parseEntries(json){
+  const out=[];
+  for(const e of pickEntries(json)){
+    const s=(e.string_list_data&&e.string_list_data[0])||{};
+    let u=(s.value||'').trim() || (e.title||'').trim() || userFromHref(s.href);
+    u=fixMojibake(u).toLowerCase().replace(/^@/,'');
+    if(!u) continue;
+    out.push({u, t: s.timestamp||0});
+  }
+  return out;
+}
+function parseHtmlExport(html){
+  const doc=new DOMParser().parseFromString(html,'text/html'); const out=[];
+  doc.querySelectorAll('a[href*="instagram.com/"]').forEach(a=>{
+    const u=(userFromHref(a.getAttribute('href'))||a.textContent.trim()).toLowerCase();
+    if(!u || ['accounts','explore','p','reel','stories','direct'].includes(u)) return;
+    let t=0; const block=a.closest('div')?.parentElement; const txt=block?block.textContent:'';
+    const d=Date.parse((txt.match(/[A-Z][a-z]{2} \d{1,2}, \d{4} \d{1,2}:\d{2} ?[ap]m/i)||[])[0]||''); if(!isNaN(d)) t=Math.floor(d/1000);
+    out.push({u,t});
+  });
+  return out;
+}
+const KIND_BY_FILE = [
+  [/(^|\/)followers(_\d+)?\.(json|html)$/i,'followers'],
+  [/(^|\/)following\.(json|html)$/i,'following'],
+  [/(^|\/)pending_follow_requests\.(json|html)$/i,'pending'],
+  [/(^|\/)recently_unfollowed_(profiles|accounts)\.(json|html)$/i,'unfollowedByMe'],
+  [/(^|\/)close_friends\.(json|html)$/i,'close'],
+];
+function kindOf(name){ for(const [re,k] of KIND_BY_FILE) if(re.test(name)) return k; return null; }
+function guessKindFromJson(j){
+  if(Array.isArray(j)) return 'followers';
+  const k=j&&Object.keys(j)[0]||'';
+  if(/following/.test(k)) return 'following';
+  if(/follow_requests_sent|pending/.test(k)) return 'pending';
+  if(/unfollowed/.test(k)) return 'unfollowedByMe';
+  if(/close_friends/.test(k)) return 'close';
+  return null;
+}
+async function parseFiles(files){
+  const acc={followers:[],following:[],pending:[],unfollowedByMe:[],close:[]};
+  const feed=(kind,name,text)=>{
+    if(!kind && !/\.json$/i.test(name)) return;
+    if(/\.html?$/i.test(name)){ acc[kind].push(...parseHtmlExport(text)); return; }
+    let j; try{ j=JSON.parse(text);}catch{ return; }
+    kind = kind || guessKindFromJson(j); if(!kind) return;
+    acc[kind].push(...parseEntries(j));
+  };
+  for(const f of files){
+    if(/\.zip$/i.test(f.name) || f.type.includes('zip')){
+      const z=await readZip(f);
+      for(const n of z.names){ const k=kindOf(n); if(k) feed(k,n,await z.text(n)); }
+    } else {
+      feed(kindOf(f.name), f.name, await f.text());
+    }
+  }
+  for(const k in acc){ const m=new Map(); for(const x of acc[k]) if(!m.has(x.u)||(x.t&&x.t<m.get(x.u).t)) m.set(x.u,x); acc[k]=[...m.values()]; }
+  return acc;
+}
+
+/* ========== Armazenamento: banco privado do Claude (se disponível) ou localStorage ========== */
+const Store = {
+  mode:'memory', db:null, uid:null, mem:{snaps:[],ignored:[]},
+  async init(){
+    try{ localStorage.setItem('_t','1'); localStorage.removeItem('_t'); this.mode='local'; }catch{}
+    try{
+      if(window.claude && typeof window.claude.use==='function'){
+        const [db,user]=await Promise.all([window.claude.use('db'),window.claude.use('user')]);
+        if(db && user){ const id=await user.id(); if(id){ this.db=db; this.uid=id; this.mode='cloud'; } }
+      }
+    }catch(e){ console.warn('db indisponível',e); }
+  },
+  col(){ return this.db.collection('data/users/'+this.uid); },
+  async load(){
+    if(this.mode==='cloud'){
+      try{
+        const [s,i]=await Promise.all([this.col().doc('snapshots').get(), this.col().doc('ignored').get()]);
+        const sd=s && (s.data?s.data():s); const id=i && (i.data?i.data():i);
+        return { snaps: JSON.parse((sd&&sd.json)||'[]'), ignored: JSON.parse((id&&id.json)||'[]') };
+      }catch(e){ console.warn(e); }
+    }
+    if(this.mode!=='memory'){
+      try{ return { snaps: JSON.parse(localStorage.getItem('radar.snaps')||'[]'), ignored: JSON.parse(localStorage.getItem('radar.ignored')||'[]') }; }catch{}
+    }
+    return this.mem;
+  },
+  async save(state){
+    this.mem=state;
+    const sj=JSON.stringify(state.snaps), ij=JSON.stringify(state.ignored);
+    try{ localStorage.setItem('radar.snaps',sj); localStorage.setItem('radar.ignored',ij);}catch{}
+    if(this.mode==='cloud'){
+      try{ await this.col().doc('snapshots').set({json:sj}); await this.col().doc('ignored').set({json:ij}); }
+      catch(e){ console.warn(e); toast('Não consegui salvar na nuvem — salvo só neste aparelho'); }
+    }
+  },
+  label(){ return {cloud:'Salvo na sua conta Claude (privado, só você vê).',local:'Salvo neste navegador/aparelho.',memory:'⚠️ Este navegador não permite salvar — faça backup para não perder o histórico.'}[this.mode]; }
+};
+
+/* Snapshot compacto: listas como "usuario:timestamp" */
+const pack = arr => arr.map(x=>x.u+':'+(x.t||0)).join(',');
+const unpack = s => s ? s.split(',').map(p=>{const i=p.lastIndexOf(':');return {u:p.slice(0,i),t:+p.slice(i+1)||0};}) : [];
+
+/* ========== Estado ========== */
+let state={snaps:[],ignored:[]};
+let view={snapIdx:0, tab:'notBack', q:'', sort:'new', limit:60};
+
+function current(){ return state.snaps[view.snapIdx]; }
+function previous(){ return state.snaps[view.snapIdx+1]; }
+
+function compute(){
+  const s=current(); if(!s) return null;
+  const fol=unpack(s.followers), fing=unpack(s.following);
+  const folM=new Map(fol.map(x=>[x.u,x])), fingM=new Map(fing.map(x=>[x.u,x]));
+  const ign=new Set(state.ignored);
+  const notBack=fing.filter(x=>!folM.has(x.u)&&!ign.has(x.u));
+  const fans=fol.filter(x=>!fingM.has(x.u));
+  const mutual=fing.filter(x=>folM.has(x.u)).map(x=>({u:x.u,t:Math.max(x.t,folM.get(x.u).t)}));
+  let lost=[],gained=[],iUnfollowed=[];
+  const p=previous();
+  if(p){
+    const pf=new Map(unpack(p.followers).map(x=>[x.u,x]));
+    const pfing=new Set(unpack(p.following).map(x=>x.u));
+    lost=[...pf.values()].filter(x=>!folM.has(x.u));
+    gained=fol.filter(x=>!pf.has(x.u));
+    iUnfollowed=[...pfing].filter(u=>!fingM.has(u)).map(u=>({u,t:0}));
+  }
+  const pending=unpack(s.pending||'');
+  const ignored=state.ignored.map(u=>({u,t:0}));
+  return {fol,fing,notBack,fans,mutual,lost,gained,iUnfollowed,pending,ignored,hasPrev:!!p};
+}
+
+const TABS=[
+  ['notBack','Não te seguem de volta'],
+  ['lost','Deixaram de seguir'],
+  ['gained','Novos seguidores'],
+  ['fans','Você não segue de volta'],
+  ['mutual','Mútuos'],
+  ['fol','Seguidores'],
+  ['fing','Seguindo'],
+  ['iUnfollowed','Você deixou de seguir'],
+  ['pending','Solicitações pendentes'],
+  ['ignored','Ignorados'],
+];
+
+/* ========== Render ========== */
+function render(){
+  const has=state.snaps.length>0;
+  $('#dash').classList.toggle('hidden',!has);
+  $('#importCard').classList.toggle('hidden',has && !render.showImport);
+  if(!has) return;
+  const c=compute(); const s=current(); const p=previous();
+  $('#snapLabel').textContent='Importação de '+fmtDateTime(s.at)+(s.demo?' · exemplo':'');
+  $('#compareLabel').innerHTML = p ? 'Comparando com '+esc(fmtDateTime(p.at)) : '<span class="muted">Importe de novo no futuro para ver quem deixou de seguir</span>';
+
+  const tile=(key,n,label,extra='')=>`<button class="stat ${view.tab===key?'active':''} ${extra}" data-tab="${key}"><div class="n">${n}</div><div class="l">${label}</div></button>`;
+  $('#stats').innerHTML =
+    tile('fol',c.fol.length,'Seguidores')+
+    tile('fing',c.fing.length,'Seguindo')+
+    tile('notBack',c.notBack.length,'Não te seguem de volta','hl')+
+    tile('lost',c.hasPrev?c.lost.length:'—','Deixaram de seguir','hl')+
+    tile('gained',c.hasPrev?c.gained.length:'—','Novos seguidores')+
+    tile('fans',c.fans.length,'Você não segue de volta');
+
+  $('#tabs').innerHTML=TABS.filter(([k])=>!['lost','gained','iUnfollowed'].includes(k)||c.hasPrev).filter(([k])=>k!=='pending'||c.pending.length).filter(([k])=>k!=='ignored'||c.ignored.length)
+    .map(([k,l])=>`<button class="tab ${view.tab===k?'on':''}" data-tab="${k}">${l} · ${c[k].length}</button>`).join('');
+
+  renderList(c); renderInsights(c); renderSnaps();
+  const on=document.querySelector('.tab.on'); if(on){ const t=$('#tabs'); t.scrollLeft=on.offsetLeft-t.offsetLeft-(t.clientWidth-on.offsetWidth)/2; }
+}
+
+function renderList(c){
+  let arr=(c[view.tab]||[]).slice();
+  const q=view.q.trim().toLowerCase().replace(/^@/,'');
+  if(q) arr=arr.filter(x=>x.u.includes(q));
+  if(view.sort==='az') arr.sort((a,b)=>a.u.localeCompare(b.u));
+  else if(view.sort==='old') arr.sort((a,b)=>(a.t||9e12)-(b.t||9e12));
+  else arr.sort((a,b)=>(b.t||0)-(a.t||0));
+  render.lastList=arr;
+  const label=(TABS.find(t=>t[0]===view.tab)||[])[1]||'';
+  $('#listInfo').textContent=`${arr.length} ${arr.length===1?'conta':'contas'} · ${label}`;
+  const ign=new Set(state.ignored);
+  const dateLabel={fol:'te segue desde',fing:'você segue desde',notBack:'você segue desde',fans:'te segue desde',gained:'te segue desde',lost:'seguia desde',mutual:'desde'}[view.tab]||'';
+  const shown=arr.slice(0,view.limit);
+  $('#list').innerHTML = shown.length ? shown.map(x=>{
+    const safe=USER_RE.test(x.u);
+    const h=hue(x.u);
+    const link = safe ? `<a href="https://www.instagram.com/${esc(x.u)}/" target="_blank" rel="noopener">@${esc(x.u)}</a>` : `<span style="font-weight:600">@${esc(x.u)}</span>`;
+    const canIgnore=['notBack','ignored'].includes(view.tab);
+    return `<li class="item">
+      <div class="av" style="background:linear-gradient(135deg,hsl(${h} 80% 60%),hsl(${(h+50)%360} 75% 45%))">${esc(x.u[0].toUpperCase())}</div>
+      <div class="who">${link}<div class="d">${x.t?esc(dateLabel+' '+fmtDate(x.t)):''}</div></div>
+      <div class="acts">
+        ${canIgnore?`<button class="icon-btn ${ign.has(x.u)?'on':''}" title="Ignorar (ex.: famosos, marcas)" data-ign="${esc(x.u)}">★</button>`:''}
+        <button class="icon-btn" title="Copiar @" data-copy="${esc(x.u)}">⧉</button>
+      </div></li>`;
+  }).join('') : `<div class="empty">${q?'Nenhum resultado para essa busca.':emptyMsg(view.tab)}</div>`;
+  $('#moreBtn').classList.toggle('hidden',arr.length<=view.limit);
+}
+function emptyMsg(tab){
+  return {notBack:'🎉 Todo mundo que você segue te segue de volta.',lost:'Ninguém deixou de te seguir desde a última importação. 🙌',gained:'Nenhum seguidor novo desde a última importação.',ignored:'Nenhuma conta ignorada.'}[tab]||'Lista vazia.';
+}
+
+function renderInsights(c){
+  const ratio=c.fing.length?(c.fol.length/c.fing.length):0;
+  const backPct=c.fing.length?Math.round(100*c.mutual.length/c.fing.length):0;
+  const now=Date.now()/1000, d30=now-30*86400;
+  const newFol30=c.fol.filter(x=>x.t>d30).length, newFing30=c.fing.filter(x=>x.t>d30).length;
+  const oldest=c.fol.filter(x=>x.t).sort((a,b)=>a.t-b.t)[0];
+  const byYear={}; c.fol.forEach(x=>{ if(x.t){const y=new Date(x.t*1000).getFullYear(); byYear[y]=(byYear[y]||0)+1;} });
+  const years=Object.keys(byYear).sort(); const maxY=Math.max(1,...Object.values(byYear));
+  let trend='';
+  if(state.snaps.length>1){
+    const pts=state.snaps.slice().reverse().map(s=>({at:s.at,n:s.followers?s.followers.split(',').length:0}));
+    trend=`<div class="kv"><span>Evolução de seguidores</span><b>${pts.map(p=>p.n).join(' → ')}</b></div>`;
+  }
+  $('#insights').innerHTML=`
+    <div class="kv"><span>Seguidores por seguindo</span><b>${ratio.toFixed(2)}</b></div>
+    <div class="kv" style="display:block"><div style="display:flex;justify-content:space-between"><span>Quem você segue e te segue de volta</span><b>${backPct}%</b></div><div class="bar"><i style="width:${backPct}%"></i></div></div>
+    <div class="kv"><span>Novos seguidores (30 dias)</span><b>${newFol30}</b></div>
+    <div class="kv"><span>Contas que você seguiu (30 dias)</span><b>${newFing30}</b></div>
+    ${oldest?`<div class="kv"><span>Seguidor mais antigo</span><b>@${esc(oldest.u)} · ${esc(fmtDate(oldest.t))}</b></div>`:''}
+    ${c.hasPrev?`<div class="kv"><span>Saldo desde a última importação</span><b class="${c.gained.length-c.lost.length>=0?'':'bad'}">${c.gained.length-c.lost.length>=0?'+':''}${c.gained.length-c.lost.length}</b></div>`:''}
+    ${trend}
+    ${years.length?`<div style="margin-top:12px" class="small muted">Seguidores por ano em que começaram a te seguir</div>`+years.map(y=>`<div style="display:flex;align-items:center;gap:8px;margin-top:6px"><span class="small" style="width:40px">${y}</span><div class="bar" style="flex:1;margin:0"><i style="width:${Math.round(100*byYear[y]/maxY)}%"></i></div><span class="small" style="width:44px;text-align:right">${byYear[y]}</span></div>`).join(''):''}
+  `;
+}
+
+function renderSnaps(){
+  $('#storageInfo').textContent=Store.label();
+  $('#snaps').innerHTML=state.snaps.map((s,i)=>`
+    <div class="snap">
+      <div><div style="font-weight:600">${esc(fmtDateTime(s.at))}${s.demo?' <span class="pill neutral">exemplo</span>':''}${i===view.snapIdx?' <span class="pill ok">vendo</span>':''}</div>
+      <div class="muted small">${s.followers?s.followers.split(',').length:0} seguidores · ${s.following?s.following.split(',').length:0} seguindo</div></div>
+      <div class="row">${i!==view.snapIdx?`<button class="btn small" data-view="${i}">Ver</button>`:''}<button class="btn small ghost" data-del="${i}" style="color:var(--bad)">Apagar</button></div>
+    </div>`).join('');
+}
+
+/* ========== Modal simples (alert/confirm são bloqueados em alguns lugares) ========== */
+function modal(html,buttons){
+  return new Promise(res=>{
+    const root=$('#modalRoot');
+    root.innerHTML=`<div class="modal-bg"><div class="modal">${html}<div class="row" style="justify-content:flex-end;margin-top:14px">${buttons.map((b,i)=>`<button class="btn small ${b.primary?'primary':''}" data-i="${i}">${esc(b.label)}</button>`).join('')}</div></div></div>`;
+    root.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{ const r=buttons[+b.dataset.i].value; const ta=root.querySelector('textarea'); root.innerHTML=''; res(typeof r==='function'?r(ta):r); });
+  });
+}
+
+/* ========== Ações ========== */
+async function importFiles(files){
+  if(!files || !files.length) return;
+  toast('Lendo arquivo…');
+  let acc;
+  try{ acc=await parseFiles([...files]); }
+  catch(e){ console.error(e); await modal(`<b>Não consegui ler o arquivo.</b><p class="muted small">${esc(e.message||e)}</p><p class="small">Confira se escolheu o formato <b>JSON</b> na exportação. Se o ZIP não abrir, extraia e envie os arquivos <code>followers_1.json</code> e <code>following.json</code>.</p>`,[{label:'OK',value:0}]); return; }
+  if(!acc.followers.length && !acc.following.length){
+    await modal(`<b>Não encontrei seguidores nesse arquivo.</b><p class="small muted">Na exportação, marque <b>Seguidores e seguindo</b> e o formato <b>JSON</b>. Os arquivos ficam em <code>connections/followers_and_following/</code>.</p>`,[{label:'OK',value:0}]); return;
+  }
+  if(!acc.followers.length || !acc.following.length){
+    const ok=await modal(`<b>Encontrei só ${acc.followers.length?'seguidores':'quem você segue'}.</b><p class="small muted">Para comparar, envie também o arquivo ${acc.followers.length?'<code>following.json</code>':'<code>followers_1.json</code>'} (pode escolher os dois juntos).</p>`,[{label:'Cancelar',value:false},{label:'Salvar assim mesmo',value:true,primary:true}]);
+    if(!ok) return;
+  }
+  state.snaps=state.snaps.filter(s=>!s.demo);
+  state.snaps.unshift({at:Date.now(),followers:pack(acc.followers),following:pack(acc.following),pending:pack(acc.pending)});
+  view.snapIdx=0; view.tab=state.snaps.length>1?'lost':'notBack'; view.limit=60; render.showImport=false;
+  await Store.save(state); render(); window.scrollTo({top:0,behavior:'smooth'});
+  toast(`Importado: ${acc.followers.length} seguidores, ${acc.following.length} seguindo`);
+}
+
+function demo(){
+  const names='ana.lima joao_p bia.santos rafa.dev carol_art lucas.fit mari.trips pedro_m julia.f gabi.photo theo_k lari.mendes nina.cafe davi.run lele.music bruno.tech livia.reads cadu_skate manu.art iago.cook sofia_m gui.games bela.style fe_rocha'.split(' ');
+  const celebs='cristiano neymarjr anitta nasa natgeo'.split(' ');
+  const now=Math.floor(Date.now()/1000), day=86400, r=i=>now-((i*37)%900+5)*day;
+  const fol1=names.slice(0,20).map((u,i)=>({u,t:r(i)}));
+  const fing1=[...names.slice(4,22),...celebs].map((u,i)=>({u,t:r(i+3)}));
+  const fol2=[...names.slice(0,20).filter(u=>!['carol_art','theo_k','davi.run'].includes(u)),'gui.games','bela.style'].map((u,i)=>({u,t:r(i)}));
+  state.snaps=[
+    {at:Date.now(),followers:pack(fol2.map((x,i)=>['gui.games','bela.style'].includes(x.u)?{u:x.u,t:now-(i%5+1)*day}:x)),following:pack(fing1),pending:'',demo:true},
+    {at:Date.now()-7*86400000,followers:pack(fol1),following:pack(fing1),pending:'',demo:true},
+  ];
+  view.snapIdx=0; view.tab='lost'; render.showImport=false; render();
+  toast('Dados de exemplo carregados (não são salvos)');
+}
+
+async function copyText(text,msg){
+  try{ await navigator.clipboard.writeText(text); toast(msg||'Copiado'); }
+  catch{ await modal(`<b>Copie manualmente</b><textarea readonly>${esc(text)}</textarea>`,[{label:'Fechar',value:0}]); }
+}
+
+async function backup(){
+  const data=JSON.stringify({v:1,snaps:state.snaps.filter(s=>!s.demo),ignored:state.ignored});
+  await copyText(data,'Backup copiado — cole num app de notas');
+}
+async function restore(){
+  const txt=await modal(`<b>Restaurar backup</b><p class="small muted">Cole aqui o texto do backup.</p><textarea placeholder='{"v":1,...}'></textarea>`,[{label:'Cancelar',value:null},{label:'Restaurar',primary:true,value:ta=>ta.value}]);
+  if(!txt) return;
+  try{ const d=JSON.parse(txt); if(!Array.isArray(d.snaps)) throw 0;
+    state={snaps:d.snaps.filter(s=>s&&typeof s.followers==='string').sort((a,b)=>b.at-a.at),ignored:(d.ignored||[]).filter(u=>typeof u==='string')};
+    view.snapIdx=0; render.showImport=false; await Store.save(state); render(); toast('Backup restaurado');
+  }catch{ toast('Backup inválido'); }
+}
+
+/* ========== Eventos ========== */
+$('#fileInput').addEventListener('change',e=>{ importFiles(e.target.files); e.target.value=''; });
+const drop=$('#drop');
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over');}));
+drop.addEventListener('drop',e=>importFiles(e.dataTransfer.files));
+$('#demoBtn').onclick=demo;
+$('#restoreBtn').onclick=restore; $('#restoreBtn2').onclick=restore;
+$('#backupBtn').onclick=backup;
+$('#newImportBtn').onclick=()=>{ render.showImport=true; render(); window.scrollTo({top:0,behavior:'smooth'}); };
+$('#search').addEventListener('input',e=>{ view.q=e.target.value; view.limit=60; renderList(compute()); });
+$('#sort').addEventListener('change',e=>{ view.sort=e.target.value; renderList(compute()); });
+$('#moreBtn').onclick=()=>{ view.limit+=100; renderList(compute()); };
+$('#copyListBtn').onclick=()=>copyText((render.lastList||[]).map(x=>'@'+x.u).join('\n'),'Lista copiada');
+$('#wipeBtn').onclick=async()=>{
+  if(await modal('<b>Apagar todo o histórico?</b><p class="small muted">Isso remove todas as importações salvas.</p>',[{label:'Cancelar',value:false},{label:'Apagar',value:true,primary:true}])){
+    state={snaps:[],ignored:[]}; await Store.save(state); render.showImport=true; render();
+  }
+};
+document.addEventListener('click',async e=>{
+  const t=e.target.closest('[data-tab],[data-copy],[data-ign],[data-view],[data-del]'); if(!t) return;
+  if(t.dataset.tab){ view.tab=t.dataset.tab; view.limit=60; render(); }
+  else if(t.dataset.copy){ copyText('@'+t.dataset.copy); }
+  else if(t.dataset.ign){ const u=t.dataset.ign; const i=state.ignored.indexOf(u); if(i<0){state.ignored.push(u);toast('@'+u+' ignorado');} else {state.ignored.splice(i,1);toast('@'+u+' voltou para a lista');} await Store.save(state); render(); }
+  else if(t.dataset.view){ view.snapIdx=+t.dataset.view; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+  else if(t.dataset.del){ const i=+t.dataset.del; if(await modal('<b>Apagar esta importação?</b>',[{label:'Cancelar',value:false},{label:'Apagar',value:true,primary:true}])){ state.snaps.splice(i,1); view.snapIdx=0; await Store.save(state); render(); } }
+});
+
+/* ========== Início ========== */
+(async()=>{
+  render();
+  await Store.init();
+  state=await Store.load();
+  if(!Array.isArray(state.snaps)) state.snaps=[];
+  if(!Array.isArray(state.ignored)) state.ignored=[];
+  render();
+})();
+</script>
+</body>
+</html>
