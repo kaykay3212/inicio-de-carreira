@@ -7,3 +7,4 @@
 - Agendamentos ficam no PostgreSQL do Neon (projeto `maya-souza-nails`, `square-hill-49843924`, região aws-us-east-1), ligado ao Render pela variável `DATABASE_URL`. A chave da API do Neon (console.neon.tech) também está no ambiente. Não mexer no projeto Neon `nexus-finance`, que é de outro sistema.
 - Sem `DATABASE_URL` (ex.: rodando localmente), os agendamentos vão para `data/agendamentos.json`.
 - Textos e comunicação com a dona do site em português do Brasil.
+- O servidor se mantém acordado das 07:00 às 22:00 (`manterAcordado` em `src/config.js`), visitando o próprio `/healthz` a cada 10 min. Não ampliar para 24h: a cota grátis do Render (750 h/mês) é compartilhada com o serviço `nexus-finance` da mesma conta. Não pingar o banco (Neon grátis tem cota de horas de computação).
