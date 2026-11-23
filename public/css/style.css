@@ -94,7 +94,11 @@ h1, h2, h3 { font-weight: 500; letter-spacing: -0.035em; line-height: 1; }
 
 /* ----------------------------------------------------------- hero */
 .hero { padding: 4.6rem var(--margem) 0; }
-.hero__cartao { position: relative; height: calc(100svh - 7.5rem); min-height: 420px; max-height: 900px; border-radius: var(--raio); overflow: hidden; background: #0e0d11; isolation: isolate; }
+.hero__cartao {
+  position: relative; height: calc(100svh - 7.5rem); min-height: 440px; max-height: 900px; border-radius: var(--raio); overflow: hidden; isolation: isolate;
+  background: radial-gradient(circle at 74% 72%, rgba(255, 61, 139, 0.2), transparent 48%), radial-gradient(circle at 14% 18%, rgba(164, 91, 255, 0.13), transparent 42%), #0e0d11;
+  touch-action: pan-y; -webkit-tap-highlight-color: transparent; cursor: pointer;
+}
 #cena { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 1.2s var(--ease); }
 .cena-pronta #cena { opacity: 1; }
 .hero__fallback { position: absolute; inset: 0; display: none; background-size: cover; background-position: center; }
@@ -102,7 +106,15 @@ h1, h2, h3 { font-weight: 500; letter-spacing: -0.035em; line-height: 1; }
 .sem-3d #cena { display: none; }
 .sem-3d .hero__fallback { display: block; }
 .hero__sobre { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: clamp(3rem, 8vw, 5rem) clamp(1.2rem, 3vw, 2rem) clamp(1.2rem, 3vw, 2rem); pointer-events: none; background: linear-gradient(rgba(11, 11, 13, 0), rgba(11, 11, 13, 0.7)); }
-.hero__chamada { max-width: 22rem; font-size: clamp(0.95rem, 1.6vw, 1.1rem); color: rgba(242, 241, 244, 0.82); }
+.hero__chamada { max-width: 22rem; font-size: clamp(0.95rem, 1.6vw, 1.1rem); color: rgba(242, 241, 244, 0.85); }
+.hero__botoes { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; pointer-events: auto; }
+.hero__botoes .pilula { height: 2.9rem; padding: 0 1.3rem; }
+.hero__dica { position: absolute; top: 1.1rem; right: 1.1rem; z-index: 2; display: inline-flex; align-items: center; gap: 0.55rem; padding: 0.5rem 0.9rem; border-radius: 999px; background: rgba(20, 20, 23, 0.85); border: 1px solid var(--linha-forte); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; pointer-events: none; transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); animation: dica-entrar 0.8s 2s var(--ease) backwards; }
+.hero__dica i { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--acento); }
+.hero__dica i::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--acento); animation: pulso 1.6s ease-out infinite; }
+@keyframes pulso { from { transform: scale(0.4); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
+@keyframes dica-entrar { from { opacity: 0; transform: translateY(-8px); } }
+.interagiu .hero__dica, .sem-3d .hero__dica { opacity: 0; transform: translateY(-8px); }
 .marcas { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0 0; color: var(--suave); font-size: 0.9rem; }
 .marcas__texto { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
 @media (max-width: 720px) { .marcas span:nth-child(2), .marcas span:nth-child(4) { display: none; } }
@@ -259,6 +271,28 @@ h1, h2, h3 { font-weight: 500; letter-spacing: -0.035em; line-height: 1; }
 .sucesso__check circle { fill: none; stroke: var(--acento); stroke-width: 2.5; stroke-dasharray: 151; stroke-dashoffset: 151; animation: desenhar 0.8s var(--ease) forwards; }
 .sucesso__check path { fill: none; stroke: var(--texto); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 40; stroke-dashoffset: 40; animation: desenhar 0.5s 0.6s var(--ease) forwards; }
 @keyframes desenhar { to { stroke-dashoffset: 0; } }
+
+/* atalhos: próximos horários livres */
+.rapido { margin-bottom: 1.4rem; }
+.rapido__lista { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.7rem 0 1rem; }
+.rapido__lista button { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; padding: 0.75rem 1.1rem; border-radius: 16px; border: 1px solid rgba(255, 61, 139, 0.55); background: rgba(255, 61, 139, 0.1); text-align: left; animation: subir 0.45s var(--ease) both; animation-delay: var(--atraso, 0s); transition: background 0.25s, transform 0.25s var(--ease); }
+.rapido__lista button:hover { background: rgba(255, 61, 139, 0.22); }
+.rapido__lista button:active { transform: scale(0.96); }
+.rapido__lista small { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--suave); }
+.rapido__lista strong { font-size: 1.15rem; font-weight: 500; letter-spacing: -0.02em; }
+.rapido__ou { display: block; }
+.rapido .carregando { grid-template-columns: repeat(3, 120px); }
+
+/* prévia de foto seguindo o mouse na lista de serviços (computador) */
+.previa { position: fixed; top: 0; left: 0; z-index: 40; width: 220px; aspect-ratio: 4 / 5; border-radius: 18px; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 0.3s var(--ease); display: none; }
+@media (hover: hover) and (pointer: fine) { .previa { display: block; } }
+.previa img { width: 100%; height: 100%; object-fit: cover; }
+.previa.visivel { opacity: 1; }
+.previa::after { content: 'Agendar →'; position: absolute; left: 50%; bottom: 0.9rem; translate: -50% 0; padding: 0.4rem 0.8rem; border-radius: 999px; background: var(--acento); color: #fff; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; }
+.servicos:hover ~ .cursor, body:has(.servico:hover) .cursor { opacity: 0; }
+
+/* profundidade nas fotos dos trabalhos */
+.card__mover { height: 116%; margin-top: -8%; will-change: transform; }
 
 /* ----------------------------------------------------------- rodapé */
 .rodape { padding: clamp(6rem, 14vw, 12rem) var(--margem) 1.5rem; }

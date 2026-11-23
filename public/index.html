@@ -52,7 +52,12 @@
         <div class="hero__fallback" id="hero-fallback" aria-hidden="true"></div>
         <div class="hero__sobre">
           <p class="hero__chamada revelar">Alongamento soft gel, esmaltação em gel e manutenção — com hora marcada.</p>
+          <div class="hero__botoes revelar">
+            <a href="#agendar" class="pilula pilula--acento" data-cursor="Agendar">Agendar horário <i class="ponto"></i></a>
+            <a href="#trabalhos" class="pilula">Ver trabalhos</a>
+          </div>
         </div>
+        <div class="hero__dica" aria-hidden="true"><i></i><span>Toque nas unhas</span></div>
       </div>
       <div class="marcas" aria-hidden="true">
         <span>+</span><span>+</span><span class="marcas__texto">Role para explorar</span><span>+</span><span>+</span>
@@ -128,6 +133,11 @@
 
         <div class="passo" id="passo-data" hidden>
           <h3><span>02</span> Qual dia?</h3>
+          <div class="rapido" id="rapido" hidden>
+            <span class="micro">⚡ Próximos horários livres — toque para reservar</span>
+            <div class="rapido__lista" id="rapido-lista"></div>
+            <span class="micro rapido__ou">ou escolha outro dia</span>
+          </div>
           <div class="dias-moldura">
             <button type="button" class="dias__seta dias__seta--esq" aria-label="Dias anteriores">←</button>
             <div class="dias" id="dias"></div>
@@ -204,6 +214,7 @@
   </div>
 
   <div class="toasts" id="toasts" aria-live="polite"></div>
+  <div class="previa" id="previa" aria-hidden="true"><img alt="" /></div>
 
   <div class="lightbox" id="lightbox" hidden>
     <button class="lightbox__fechar" type="button" aria-label="Fechar">×</button>

@@ -66,14 +66,13 @@ function dataDentroDoPeriodo(data) {
   return data >= hoje && data <= somarDias(hoje, config.diasAntecedencia);
 }
 
-async function horariosLivres(data, servico, cfg) {
+// Calcula os horários livres de um dia a partir dos agendamentos e bloqueios desse dia
+function calcularLivres(data, servico, cfg, agendados, bloqueios) {
   const expediente = cfg.horarios[diaDaSemana(data)];
   if (!expediente || !dataDentroDoPeriodo(data)) return [];
-
-  const bloqueios = await store.bloqueiosNaData(data);
   if (bloqueios.some((b) => !b.inicio)) return []; // dia inteiro fechado
 
-  const ocupados = (await store.ativosNaData(data)).map((a) => ({ inicio: paraMin(a.inicio), fim: paraMin(a.fim) }));
+  const ocupados = agendados.map((a) => ({ inicio: paraMin(a.inicio), fim: paraMin(a.fim) }));
   bloqueios.forEach((b) => ocupados.push({ inicio: paraMin(b.inicio), fim: paraMin(b.fim) }));
   if (cfg.pausa) ocupados.push({ inicio: paraMin(cfg.pausa.inicio), fim: paraMin(cfg.pausa.fim) });
 
@@ -87,6 +86,12 @@ async function horariosLivres(data, servico, cfg) {
     livres.push(paraHHMM(ini));
   }
   return livres;
+}
+
+async function horariosLivres(data, servico, cfg) {
+  if (!cfg.horarios[diaDaSemana(data)] || !dataDentroDoPeriodo(data)) return [];
+  const [agendados, bloqueios] = await Promise.all([store.ativosNaData(data), store.bloqueiosNaData(data)]);
+  return calcularLivres(data, servico, cfg, agendados, bloqueios);
 }
 
 // Links para a cliente salvar o horário no calendário do celular (lembrete automático)
@@ -136,6 +141,30 @@ app.get('/api/horarios', async (req, res, next) => {
     const s = cfg.servicos.find((x) => x.id === servico);
     if (!s || !dataValida(data)) return res.status(400).json({ erro: 'Data ou serviço inválido.' });
     res.json({ data, horarios: await horariosLivres(data, s, cfg) });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Próximos horários livres (atalhos de 1 toque no agendamento)
+app.get('/api/sugestoes', async (req, res, next) => {
+  try {
+    const cfg = await ajustes.obter();
+    const s = cfg.servicos.find((x) => x.id === req.query.servico);
+    if (!s) return res.status(400).json({ erro: 'Serviço inválido.' });
+    const hoje = agoraNoStudio().data;
+    const [agendados, bloqueios] = await Promise.all([store.listar(hoje), store.listarBloqueios(hoje)]);
+    const sugestoes = [];
+    for (let i = 0; i <= config.diasAntecedencia && sugestoes.length < 3; i++) {
+      const data = somarDias(hoje, i);
+      const livres = calcularLivres(
+        data, s, cfg,
+        agendados.filter((a) => a.data === data && a.status === 'confirmado'),
+        bloqueios.filter((b) => b.data === data)
+      );
+      if (livres.length) sugestoes.push({ data, inicio: livres[0] });
+    }
+    res.json({ sugestoes });
   } catch (e) {
     next(e);
   }

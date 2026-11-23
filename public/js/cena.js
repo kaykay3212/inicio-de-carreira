@@ -1,6 +1,10 @@
-// Cena 3D do topo: unhas brilhantes flutuando, desenhadas pela placa de vídeo (WebGL).
-// Pensada para ser leve: nenhum arquivo extra, resolução que se ajusta sozinha,
-// e pausa automática quando o topo sai da tela ou a aba fica em segundo plano.
+// Cena 3D do topo: unhas postiças de verdade (malhas 3D), leves e nítidas.
+// - Chegam voando ao abrir a página
+// - Tocar numa unha: ela gira, solta brilhos e troca de esmalte
+// - Tocar no fundo: uma onda espalha as unhas
+// - Mover o dedo/mouse: elas desviam; inclinar o celular: elas acompanham
+// Desempenho: nenhum arquivo extra, bordas suavizadas, densidade de pixels
+// que se ajusta ao aparelho e pausa quando o topo sai da tela.
 (function () {
   const canvas = document.getElementById('cena');
   const cartao = document.getElementById('hero-cartao');
@@ -8,322 +12,495 @@
   const menosMovimento = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const semSuporte = () => cartao.classList.add('sem-3d');
 
-  const gl = canvas.getContext('webgl', { antialias: false, alpha: false, depth: false, stencil: false, powerPreference: 'high-performance' });
+  const gl = canvas.getContext('webgl', { antialias: false, alpha: true, premultipliedAlpha: true, powerPreference: 'high-performance' });
   if (!gl) return semSuporte();
 
-  const N = 7;
-  const VERT = 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }';
+  // ================================================================ matemática
+  const perspectiva = (fov, asp, perto, longe) => {
+    const f = 1 / Math.tan(fov / 2), nf = 1 / (perto - longe);
+    return new Float32Array([f / asp, 0, 0, 0, 0, f, 0, 0, 0, 0, (longe + perto) * nf, -1, 0, 0, 2 * longe * perto * nf, 0]);
+  };
+  function modelo(saida, px, py, pz, ax, ay, az, s) {
+    const ca = Math.cos(ax), sa = Math.sin(ax), cb = Math.cos(ay), sb = Math.sin(ay), cc = Math.cos(az), sc = Math.sin(az);
+    saida[0] = cb * cc * s; saida[1] = (ca * sc + sa * sb * cc) * s; saida[2] = (sa * sc - ca * sb * cc) * s; saida[3] = 0;
+    saida[4] = -cb * sc * s; saida[5] = (ca * cc - sa * sb * sc) * s; saida[6] = (sa * cc + ca * sb * sc) * s; saida[7] = 0;
+    saida[8] = sb * s; saida[9] = -sa * cb * s; saida[10] = ca * cb * s; saida[11] = 0;
+    saida[12] = px; saida[13] = py; saida[14] = pz; saida[15] = 1;
+    return saida;
+  }
+  const CAM_Z = 5;
+  const vista = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, -CAM_Z, 1]);
+
+  // ================================================================ malha da unha (gerada no código)
+  // "superelipsoide": placa fina com borda arredondada e contorno quadrado-oval,
+  // depois curvada (arco da unha) e afinando levemente na ponta (amendoado).
+  const A = 0.2, B = 0.46, T = 0.045;
+  const pot = (x, m) => Math.sign(x) * Math.pow(Math.abs(x), m);
+  function pontoUnha(th, ph) {
+    const cp = pot(Math.cos(ph), 0.22), sp = pot(Math.sin(ph), 0.22);
+    let x = A * cp * pot(Math.cos(th), 0.7);
+    const y = B * cp * pot(Math.sin(th), 0.7);
+    let z = T * sp;
+    x *= 1 - 0.22 * Math.pow(Math.max(y / B, 0), 2); // ponta mais fina
+    z -= 1.1 * x * x; // arco da unha
+    return [x, y, z];
+  }
+  function gerarMalha(nTh, nPh) {
+    const pos = [], nor = [], idx = [];
+    const eps = 1e-3;
+    for (let j = 0; j <= nPh; j++) {
+      const ph = -Math.PI / 2 + (Math.PI * j) / nPh;
+      const phc = Math.min(Math.max(ph, -Math.PI / 2 + eps * 4), Math.PI / 2 - eps * 4);
+      for (let i = 0; i <= nTh; i++) {
+        const th = -Math.PI + (2 * Math.PI * i) / nTh;
+        const p = pontoUnha(th, ph);
+        const a = pontoUnha(th + eps, phc), b = pontoUnha(th - eps, phc);
+        const c = pontoUnha(th, phc + eps), d = pontoUnha(th, phc - eps);
+        const t1 = [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+        const t2 = [c[0] - d[0], c[1] - d[1], c[2] - d[2]];
+        let n = [t1[1] * t2[2] - t1[2] * t2[1], t1[2] * t2[0] - t1[0] * t2[2], t1[0] * t2[1] - t1[1] * t2[0]];
+        const l = Math.hypot(...n) || 1;
+        n = n.map((v) => v / l);
+        if (Math.abs(ph) > Math.PI / 2 - 0.01) n = [0, 0, Math.sign(ph)]; // polos (centro das faces)
+        pos.push(...p);
+        nor.push(...n);
+      }
+    }
+    const linha = nTh + 1;
+    for (let j = 0; j < nPh; j++) for (let i = 0; i < nTh; i++) {
+      const a = j * linha + i, b = a + 1, c = a + linha, d = c + 1;
+      idx.push(a, c, b, b, c, d);
+    }
+    return { pos: new Float32Array(pos), nor: new Float32Array(nor), idx: new Uint16Array(idx) };
+  }
+  const malha = gerarMalha(48, 16);
+
+  // ================================================================ shaders
+  const VERT = `
+attribute vec3 aPos; attribute vec3 aNor;
+uniform mat4 uProj, uView, uModel;
+varying vec3 vNor, vMundo, vLocal;
+void main() {
+  vec4 w = uModel * vec4(aPos, 1.0);
+  vMundo = w.xyz; vNor = mat3(uModel) * aNor; vLocal = aPos;
+  gl_Position = uProj * uView * w;
+}`;
   const FRAG = `
 precision highp float;
-#define N ${N}
-uniform vec2 uRes;
-uniform vec3 uPos[N];
-uniform mat3 uRot[N];
-uniform vec3 uCor[N];
-uniform float uMetal[N];
+varying vec3 vNor, vMundo, vLocal;
+uniform vec3 uCor, uCor2;
+uniform float uTipo, uTempo, uFlash;
 uniform vec2 uLuz;
-
-// unha postiça: oval achatado, com a curvatura de uma unha de verdade
-float sdUnha(vec3 p) {
-  p.z += p.x * p.x * 0.9;
-  vec2 b = vec2(0.2, 0.46);
-  float r = 0.19;
-  vec2 q = abs(p.xy) - b + r;
-  float d2 = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
-  vec2 w = vec2(d2, abs(p.z) - 0.035);
-  return min(max(w.x, w.y), 0.0) + length(max(w, 0.0)) - 0.025;
-}
-
-vec3 normalLocal(vec3 q) {
-  const vec2 e = vec2(0.0012, -0.0012);
-  return normalize(e.xyy * sdUnha(q + e.xyy) + e.yyx * sdUnha(q + e.yyx) + e.yxy * sdUnha(q + e.yxy) + e.xxx * sdUnha(q + e.xxx));
-}
-
-// "estúdio de fotografia" refletido nas unhas
+float hash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
 vec3 ambiente(vec3 r) {
   vec3 c = mix(vec3(0.015, 0.013, 0.02), vec3(0.16, 0.14, 0.19), r.y * 0.5 + 0.5);
-  c += vec3(1.0, 0.96, 0.98) * smoothstep(0.72, 0.96, r.y) * 1.4;
+  c += vec3(1.0, 0.96, 0.98) * smoothstep(0.7, 0.96, r.y) * 1.4;
   c += vec3(1.0, 0.18, 0.5) * smoothstep(0.5, 0.92, r.x) * 1.1;
   c += vec3(0.5, 0.35, 1.0) * smoothstep(0.55, 0.95, -r.x) * 0.6;
   return c;
 }
-
-// fundo já em cores de tela (não passa pela correção de tons)
-vec3 fundo(vec2 uv) {
-  float g = length(uv - vec2(0.45, -0.35));
-  vec3 c = vec3(0.055, 0.051, 0.066);
-  c += vec3(1.0, 0.24, 0.55) * 0.11 * exp(-g * g * 1.4);
-  vec2 k = uv + vec2(0.9, -0.6);
-  c += vec3(0.55, 0.38, 1.0) * 0.05 * exp(-dot(k, k) * 1.4);
-  return c * (1.0 - 0.3 * dot(uv * 0.5, uv * 0.5));
-}
-
 void main() {
-  vec2 uv = (gl_FragCoord.xy * 2.0 - uRes) / uRes.y;
-  vec3 ro = vec3(0.0, 0.0, 4.0);
-  vec3 rd = normalize(vec3(uv, -2.2));
-  vec3 col = fundo(uv);
-
-  // só calcula as unhas que o raio realmente pode atingir
-  float alvo[N];
-  float tmin = 1e5;
-  float tmax = -1.0;
-  for (int i = 0; i < N; i++) {
-    vec3 oc = ro - uPos[i];
-    float b = dot(oc, rd);
-    float h = b * b - (dot(oc, oc) - 0.37);
-    alvo[i] = 0.0;
-    if (h > 0.0) {
-      h = sqrt(h);
-      if (-b + h > 0.0) {
-        alvo[i] = 1.0;
-        tmin = min(tmin, max(-b - h, 0.0));
-        tmax = max(tmax, -b + h);
-      }
-    }
+  vec3 n = normalize(vNor);
+  if (!gl_FrontFacing) n = -n;
+  vec3 v = normalize(vec3(0.0, 0.0, ${CAM_Z.toFixed(1)}) - vMundo);
+  vec3 L = normalize(vec3(0.6 + uLuz.x * 1.4, 0.9 + uLuz.y * 1.1, 1.3));
+  vec3 h = normalize(L + v);
+  vec3 base = uCor;
+  // 4 = francesinha: ponta clara com a linha "sorriso"
+  if (uTipo > 3.5) base = mix(uCor, uCor2, smoothstep(-0.006, 0.006, vLocal.y - (0.25 + 1.6 * vLocal.x * vLocal.x)));
+  float dif = max(dot(n, L), 0.0);
+  float spec = pow(max(dot(n, h), 0.0), 120.0);
+  float fre = pow(1.0 - max(dot(n, v), 0.0), 4.0);
+  vec3 r = reflect(-v, n);
+  vec3 c;
+  if (uTipo > 0.5 && uTipo < 1.5) c = base * ambiente(r) * 1.35 + spec * 1.6; // 1 = cromado
+  else {
+    // gel: cor cheia + reflexo branco de estúdio (sem tingir a cor)
+    float softbox = smoothstep(0.55, 0.95, r.y) * 0.9 + smoothstep(0.6, 0.95, r.x) * 0.35;
+    c = base * (0.3 + 0.85 * dif) + vec3(softbox) * (0.08 + 0.7 * fre) + spec * 1.6;
   }
-
-  if (tmax > 0.0) {
-    float t = tmin;
-    float d = 1e5;
-    float qual = -1.0;
-    for (int s = 0; s < 64; s++) {
-      vec3 p = ro + rd * t;
-      d = 1e5;
-      for (int i = 0; i < N; i++) {
-        if (alvo[i] > 0.5) {
-          float di = sdUnha(uRot[i] * (p - uPos[i]));
-          if (di < d) { d = di; qual = float(i); }
-        }
-      }
-      if (d < 0.0012 || t > tmax) break;
-      t += d * 0.8;
-    }
-    if (d < 0.004 && t < tmax) {
-      vec3 p = ro + rd * t;
-      mat3 R = mat3(1.0);
-      vec3 P = vec3(0.0);
-      vec3 base = vec3(1.0);
-      float metal = 0.0;
-      for (int i = 0; i < N; i++) {
-        if (float(i) == qual) { R = uRot[i]; P = uPos[i]; base = uCor[i]; metal = uMetal[i]; }
-      }
-      vec3 n = normalLocal(R * (p - P)) * R;
-      vec3 v = -rd;
-      vec3 L = normalize(vec3(0.6 + uLuz.x * 1.4, 0.9 + uLuz.y * 1.1, 1.3));
-      float dif = max(dot(n, L), 0.0);
-      float spec = pow(max(dot(n, normalize(L + v)), 0.0), 110.0);
-      float fre = pow(1.0 - max(dot(n, v), 0.0), 4.0);
-      vec3 env = ambiente(reflect(rd, n));
-      vec3 c;
-      if (metal > 0.5) c = base * env * 1.35 + spec * 1.6;
-      else c = base * (0.16 + 0.8 * dif) + env * (0.06 + 0.9 * fre) + spec * 1.8;
-      // correção de tons só nas unhas
-      c = 1.0 - exp(-c * 1.35);
-      col = pow(c, vec3(0.4545));
-    }
+  // 2 = glitter: flocos que acendem conforme o ângulo
+  if (uTipo > 1.5 && uTipo < 2.5) {
+    vec3 cel = floor(vLocal * 150.0);
+    float r = hash(cel);
+    vec3 dir = vec3(hash(cel + 1.3) - 0.5, hash(cel + 2.7) - 0.5, 0.0) * 1.4;
+    float floco = step(0.7, r) * pow(max(dot(normalize(n + dir), h), 0.0), 24.0);
+    c += uCor2 * floco * 2.6;
   }
-  gl_FragColor = vec4(col, 1.0);
+  // 3 = olho de gato: faixa magnética que segue a luz
+  if (uTipo > 2.5 && uTipo < 3.5) {
+    float pos = vLocal.x * 0.8 + vLocal.y * 0.35 - (uLuz.x * 0.12 + sin(uTempo * 0.8) * 0.06);
+    c += uCor2 * exp(-pos * pos * 90.0) * (0.5 + 0.9 * dif);
+  }
+  c += uFlash * vec3(1.0, 0.75, 0.88) * 0.7;
+  c = 1.0 - exp(-c * 1.35);
+  gl_FragColor = vec4(pow(c, vec3(0.4545)), 1.0);
+}`;
+  const VERT_BRILHO = `
+attribute vec3 aPos; attribute float aVida; attribute float aTam;
+uniform mat4 uProj, uView; uniform float uDpr;
+varying float vVida;
+void main() { vVida = aVida; gl_Position = uProj * uView * vec4(aPos, 1.0); gl_PointSize = aTam * uDpr * (0.4 + aVida) / gl_Position.w * 5.0; }`;
+  const FRAG_BRILHO = `
+precision mediump float;
+varying float vVida;
+void main() {
+  vec2 p = gl_PointCoord * 2.0 - 1.0;
+  float estrela = max(0.0, 1.0 - abs(p.x) * 6.0 - abs(p.y) * 0.9) + max(0.0, 1.0 - abs(p.y) * 6.0 - abs(p.x) * 0.9) + max(0.0, 1.0 - length(p) * 2.2);
+  gl_FragColor = vec4(mix(vec3(1.0, 0.3, 0.6), vec3(1.0), estrela * 0.5) * estrela * vVida, 0.0);
 }`;
 
-  function compilar(tipo, fonte) {
-    const s = gl.createShader(tipo);
-    gl.shaderSource(s, fonte);
-    gl.compileShader(s);
-    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-      console.warn('Cena 3D desativada:', gl.getShaderInfoLog(s));
-      return null;
+  function programa(v, f) {
+    const sh = (tipo, src) => {
+      const s = gl.createShader(tipo);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+      return s;
+    };
+    const p = gl.createProgram();
+    gl.attachShader(p, sh(gl.VERTEX_SHADER, v));
+    gl.attachShader(p, sh(gl.FRAGMENT_SHADER, f));
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    const u = {};
+    for (let i = 0; i < gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); i++) {
+      const nome = gl.getActiveUniform(p, i).name;
+      u[nome] = gl.getUniformLocation(p, nome);
     }
-    return s;
+    return { p, u, a: (nome) => gl.getAttribLocation(p, nome) };
   }
-  const vs = compilar(gl.VERTEX_SHADER, VERT);
-  const fs = compilar(gl.FRAGMENT_SHADER, FRAG);
-  if (!vs || !fs) return semSuporte();
-  const prog = gl.createProgram();
-  gl.attachShader(prog, vs);
-  gl.attachShader(prog, fs);
-  gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return semSuporte();
-  gl.useProgram(prog);
+  let progUnha, progBrilho;
+  try {
+    progUnha = programa(VERT, FRAG);
+    progBrilho = programa(VERT_BRILHO, FRAG_BRILHO);
+  } catch (e) {
+    console.warn('Cena 3D desativada:', e.message);
+    return semSuporte();
+  }
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-  const locP = gl.getAttribLocation(prog, 'p');
-  gl.enableVertexAttribArray(locP);
-  gl.vertexAttribPointer(locP, 2, gl.FLOAT, false, 0, 0);
+  const buffer = (dados, alvo = gl.ARRAY_BUFFER, uso = gl.STATIC_DRAW) => {
+    const b = gl.createBuffer();
+    gl.bindBuffer(alvo, b);
+    gl.bufferData(alvo, dados, uso);
+    return b;
+  };
+  const bPos = buffer(malha.pos), bNor = buffer(malha.nor), bIdx = buffer(malha.idx, gl.ELEMENT_ARRAY_BUFFER);
 
-  const u = (n) => gl.getUniformLocation(prog, n);
-  const uRes = u('uRes'), uPos = u('uPos'), uRot = u('uRot'), uCor = u('uCor'), uMetal = u('uMetal'), uLuz = u('uLuz');
-
-  // cores das unhas (convertidas para luz linear)
+  // ================================================================ esmaltes
   const lin = (hex) => [1, 3, 5].map((i) => Math.pow(parseInt(hex.slice(i, i + 2), 16) / 255, 2.2));
-  const unhas = [
-    { cor: '#ff3d8b', metal: 0, base: [-1.55, 0.35, 0.0] },
-    { cor: '#f6eef1', metal: 0, base: [-0.62, -0.5, 0.55] },
-    { cor: '#141216', metal: 0, base: [0.2, 0.42, -0.25] },
-    { cor: '#d9d9e0', metal: 1, base: [1.05, -0.32, 0.35] },
-    { cor: '#b3123c', metal: 0, base: [1.8, 0.52, -0.35] },
-    { cor: '#b79cff', metal: 0, base: [-0.25, -1.08, -0.55] },
-    { cor: '#e8b4a2', metal: 0, base: [0.85, 1.12, -0.75] },
-  ].map((o, i) => ({
-    ...o,
-    fase: i * 1.7,
-    giro: [0.3 + (i % 3) * 0.12, 0.22 + (i % 2) * 0.18, 0.1 + (i % 4) * 0.05],
-    ang: [i * 0.9, i * 1.3, i * 0.6],
-    desvio: [0, 0],
-    vel: [0, 0],
-  }));
-  gl.uniform3fv(uCor, new Float32Array(unhas.flatMap((o) => lin(o.cor))));
-  gl.uniform1fv(uMetal, new Float32Array(unhas.map((o) => o.metal)));
+  const ESMALTES = [
+    { tipo: 0, cor: '#ff3d8b', cor2: '#ffffff' }, // gel pink
+    { tipo: 4, cor: '#f1d3c9', cor2: '#fbf8f6' }, // francesinha
+    { tipo: 3, cor: '#3b1d6e', cor2: '#d9d2ff' }, // olho de gato roxo
+    { tipo: 2, cor: '#111114', cor2: '#c9d6ff' }, // preto com glitter
+    { tipo: 1, cor: '#dcdce6', cor2: '#ffffff' }, // cromado
+    { tipo: 0, cor: '#b3123c', cor2: '#ffffff' }, // vermelho
+    { tipo: 0, cor: '#0f5b3a', cor2: '#ffffff' }, // verde esmeralda
+    { tipo: 2, cor: '#c9a24a', cor2: '#fff1c2' }, // dourado com glitter
+    { tipo: 0, cor: '#b79cff', cor2: '#ffffff' }, // lilás
+    { tipo: 3, cor: '#1d2c4a', cor2: '#bfe3ff' }, // olho de gato azul
+  ].map((e) => ({ ...e, c1: lin(e.cor), c2: lin(e.cor2) }));
 
-  // ---------------------------------------------------------------- tamanho e qualidade adaptativa
-  const celular = matchMedia('(max-width: 720px)').matches;
-  let escala = celular ? 0.7 : 0.62;
-  const ESCALA_MAX = celular ? 0.85 : 0.8;
-  const ESCALA_MIN = 0.45;
-  let largura = 1, altura = 1, aspecto = 1;
+  const LAYOUT = [
+    [-1.65, 0.55, -0.2], [-0.85, -0.45, 0.45], [-0.05, 0.62, 0.05], [0.8, -0.35, 0.5], [1.6, 0.45, -0.25],
+    [1.95, -0.95, -0.6], [0.45, -1.05, -0.35], [1.15, 1.15, -0.7], [-0.75, 1.2, -0.8],
+  ];
+  const unhas = LAYOUT.map((b, i) => ({
+    base: b,
+    esmalte: i % ESMALTES.length,
+    p: [b[0] * 2.4 + (i % 2 ? 2 : -2), b[1] * 2.4 - 3, -7 - i * 0.6], // começa longe (entrada voando)
+    v: [0, 0, 0],
+    extra: [0, 0, 0], // giro extra (pirueta) que volta ao normal
+    w: [0, 0, 0],
+    inclinacao: ((i * 53) % 100) / 100 * 2 - 1, // ângulo próprio no plano
+    giro: [0.5 + (i % 3) * 0.15, 0.45 + (i % 2) * 0.2, 0.12 + (i % 4) * 0.05],
+    fase: i * 1.7,
+    escala: 1, vEscala: 0, tam: 0.85 + ((i * 37) % 30) / 100,
+    flash: 0,
+    atraso: 0.15 + i * 0.09,
+    m: new Float32Array(16),
+  }));
+
+  // ================================================================ brilhos (partículas)
+  const MAX_BRILHOS = 160;
+  const brilhos = [];
+  const dadosBrilho = new Float32Array(MAX_BRILHOS * 5);
+  const bBrilho = buffer(dadosBrilho, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW);
+  function soltarBrilhos(x, y, z, qtd) {
+    for (let i = 0; i < qtd && brilhos.length < MAX_BRILHOS; i++) {
+      const a = Math.random() * Math.PI * 2, b = Math.random() * Math.PI - Math.PI / 2, vel = 1.2 + Math.random() * 2.2;
+      brilhos.push({ p: [x, y, z], v: [Math.cos(a) * Math.cos(b) * vel, Math.sin(b) * vel + 0.6, Math.sin(a) * Math.cos(b) * vel], vida: 1, tam: 6 + Math.random() * 10 });
+    }
+  }
+
+  // ================================================================ tamanho e qualidade
+  let dpr = Math.min(devicePixelRatio || 1, 1.5);
+  const NIVEIS = [2, 1.5, 1.25, 1];
+  let largura = 0, altura = 0, aspecto = 1, proj = perspectiva(0.62, 1, 0.1, 40);
   function ajustarTamanho() {
     const r = cartao.getBoundingClientRect();
+    const w = Math.max(2, Math.round(r.width * dpr)), h = Math.max(2, Math.round(r.height * dpr));
     aspecto = r.width / Math.max(r.height, 1);
-    let w = Math.round(r.width * escala), h = Math.round(r.height * escala);
-    const maxPx = 650000; // teto de pixels, para telas muito grandes
-    if (w * h > maxPx) {
-      const k = Math.sqrt(maxPx / (w * h));
-      w = Math.round(w * k);
-      h = Math.round(h * k);
+    if (w !== largura || h !== altura) {
+      largura = canvas.width = w;
+      altura = canvas.height = h;
+      gl.viewport(0, 0, w, h);
     }
-    if (w === largura && h === altura) return;
-    largura = canvas.width = Math.max(w, 2);
-    altura = canvas.height = Math.max(h, 2);
-    gl.viewport(0, 0, largura, altura);
-    gl.uniform2f(uRes, largura, altura);
+    proj = perspectiva(0.62, aspecto, 0.1, 40);
   }
 
-  // ---------------------------------------------------------------- interação
-  let mouseX = 0, mouseY = 0, alvoX = 0, alvoY = 0, apontando = false, rolagem = 0;
-  cartao.addEventListener('pointermove', (e) => {
+  // ================================================================ interação
+  let tamTela = 1;
+  let alvoX = 0, alvoY = 0, mouseX = 0, mouseY = 0, apontando = false, rolagem = 0, gx = 0, gy = 0, interagiu = false;
+  const meiaAltura = CAM_Z * Math.tan(0.31); // metade da altura visível em z = 0
+  const paraMundo = (cx, cy) => [cx * meiaAltura * aspecto, cy * meiaAltura];
+  function coordenadas(e) {
     const r = cartao.getBoundingClientRect();
-    alvoX = ((e.clientX - r.left) / r.width) * 2 - 1;
-    alvoY = -(((e.clientY - r.top) / r.height) * 2 - 1);
-    apontando = true;
+    return [((e.clientX - r.left) / r.width) * 2 - 1, -(((e.clientY - r.top) / r.height) * 2 - 1)];
+  }
+  cartao.addEventListener('pointermove', (e) => {
+    [alvoX, alvoY] = coordenadas(e);
+    apontando = e.pointerType === 'mouse' || e.buttons > 0 || e.pointerType === 'touch';
   }, { passive: true });
   cartao.addEventListener('pointerleave', () => (apontando = false));
+  cartao.addEventListener('pointerup', (e) => e.pointerType !== 'mouse' && (apontando = false));
 
-  // matriz de rotação (coluna principal) a partir de 3 ângulos
-  function rotacao(a, b, c, saida, o) {
-    const ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b), cc = Math.cos(c), sc = Math.sin(c);
-    saida[o] = cb * cc; saida[o + 1] = ca * sc + sa * sb * cc; saida[o + 2] = sa * sc - ca * sb * cc;
-    saida[o + 3] = -cb * sc; saida[o + 4] = ca * cc - sa * sb * sc; saida[o + 5] = sa * cc + ca * sb * sc;
-    saida[o + 6] = sb; saida[o + 7] = -sa * cb; saida[o + 8] = ca * cb;
+  // qual unha está sob o dedo? (projeta o centro de cada uma na tela)
+  function unhaSob(cx, cy) {
+    let melhor = null, menor = Infinity;
+    for (const o of unhas) {
+      const z = CAM_Z - o.p[2];
+      const sx = (o.p[0] / z) * (CAM_Z / meiaAltura) / aspecto;
+      const sy = (o.p[1] / z) * (CAM_Z / meiaAltura);
+      const raio = ((0.42 * o.tam * o.escala * tamTela) / z) * (CAM_Z / meiaAltura);
+      const d = Math.hypot((sx - cx) * aspecto, sy - cy);
+      if (d < raio * 1.15 && d < menor) { menor = d; melhor = o; }
+    }
+    return melhor;
+  }
+  cartao.addEventListener('click', (e) => {
+    if (e.target.closest('a, button')) return;
+    const [cx, cy] = coordenadas(e);
+    marcarInteracao();
+    pedirGiroscopio();
+    const o = unhaSob(cx, cy);
+    if (o) {
+      // troca o esmalte, gira e solta brilhos
+      o.esmalte = (o.esmalte + 1 + Math.floor(Math.random() * 3)) % ESMALTES.length;
+      o.w[1] += 16 + Math.random() * 6; // pirueta
+      o.w[0] += (Math.random() - 0.5) * 6;
+      o.vEscala += 5;
+      o.flash = 1;
+      soltarBrilhos(o.p[0], o.p[1], o.p[2] + 0.2, 26);
+      if (navigator.vibrate) navigator.vibrate(12);
+    } else {
+      // onda que espalha as unhas a partir do toque
+      const [wx, wy] = paraMundo(cx, cy);
+      for (const u of unhas) {
+        const dx = u.p[0] - wx, dy = u.p[1] - wy, d = Math.hypot(dx, dy) || 1;
+        const f = Math.max(0, 3 - d) * 2.4;
+        u.v[0] += (dx / d) * f;
+        u.v[1] += (dy / d) * f;
+        u.v[2] += f * 0.5;
+        u.w[2] += (Math.random() - 0.5) * f * 1.5;
+        u.w[0] += (Math.random() - 0.5) * f;
+      }
+      soltarBrilhos(wx, wy, 0.3, 12);
+    }
+    if (!rodando && visivel && !menosMovimento) iniciar();
+  });
+  function marcarInteracao() {
+    if (interagiu) return;
+    interagiu = true;
+    cartao.classList.add('interagiu');
   }
 
-  const pos = new Float32Array(N * 3);
-  const rot = new Float32Array(N * 9);
+  // inclinar o celular move as unhas
+  let giroscopioPedido = false;
+  function ouvirGiroscopio() {
+    addEventListener('deviceorientation', (e) => {
+      if (e.beta == null) return;
+      gx = Math.max(-1, Math.min(1, (e.gamma || 0) / 30));
+      gy = Math.max(-1, Math.min(1, ((e.beta || 0) - 45) / 30));
+    }, { passive: true });
+  }
+  function pedirGiroscopio() {
+    if (giroscopioPedido || !('DeviceOrientationEvent' in window)) return;
+    giroscopioPedido = true;
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission().then((r) => r === 'granted' && ouvirGiroscopio()).catch(() => {});
+    }
+  }
+  if ('DeviceOrientationEvent' in window && typeof DeviceOrientationEvent.requestPermission !== 'function') ouvirGiroscopio();
+
+  // ================================================================ física
   function atualizar(t, dt) {
-    mouseX += (alvoX - mouseX) * Math.min(dt * 4, 1);
-    mouseY += (alvoY - mouseY) * Math.min(dt * 4, 1);
-    // espalha as unhas conforme o formato da tela (celular em pé = mais estreito)
-    const kx = Math.min(Math.max(aspecto / 1.8, 0.42), 1);
-    const ky = aspecto < 1 ? 1.35 : 1;
-    // ponteiro no "chão" da cena (z = 0)
-    const px = mouseX * aspecto * (4 / 2.2), py = mouseY * (4 / 2.2);
-    unhas.forEach((o, i) => {
-      let x = o.base[0] * kx + Math.sin(t * 0.6 + o.fase) * 0.07;
-      let y = o.base[1] * ky + Math.cos(t * 0.5 + o.fase) * 0.1 - rolagem * 0.6;
-      // as unhas "fogem" do dedo/mouse, como se tivessem mola
-      let fx = 0, fy = 0;
-      if (apontando) {
-        const dx = x - px, dy = y - py, dist = Math.hypot(dx, dy) || 1;
-        const forca = Math.max(0, 1.05 - dist) * 2.2;
-        fx = (dx / dist) * forca;
-        fy = (dy / dist) * forca;
+    const suave = 1 - Math.exp(-dt * 6);
+    mouseX += (alvoX - mouseX) * suave;
+    mouseY += (alvoY - mouseY) * suave;
+    const kx = Math.min(Math.max(aspecto / 1.75, 0.42), 1.05);
+    const ky = aspecto < 1 ? 1.2 : 1;
+    const sobe = aspecto < 1 ? 0.35 : 0.1; // deixa a parte de baixo livre para o texto
+    tamTela = aspecto < 1 ? 0.78 : 1;
+    const [px, py] = paraMundo(mouseX, mouseY);
+    for (const o of unhas) {
+      const ativo = t > o.atraso;
+      const alvo = [
+        o.base[0] * kx + Math.sin(t * 0.55 + o.fase) * 0.07 + gx * 0.35,
+        o.base[1] * ky + sobe + Math.cos(t * 0.45 + o.fase) * 0.09 - gy * 0.3 + rolagem * 1.6,
+        o.base[2] - rolagem * 1.2,
+      ];
+      const k = ativo ? 16 : 0, amort = ativo ? 4.5 : 0;
+      for (let i = 0; i < 3; i++) {
+        let f = (alvo[i] - o.p[i]) * k;
+        if (apontando && i < 2) {
+          const dx = o.p[0] - px, dy = o.p[1] - py, d = Math.hypot(dx, dy) || 1;
+          f += ((i === 0 ? dx : dy) / d) * Math.max(0, 1.1 - d) * 30;
+        }
+        o.v[i] = (o.v[i] + f * dt) * Math.exp(-amort * dt);
+        o.p[i] += o.v[i] * dt;
       }
-      for (let k = 0; k < 2; k++) {
-        const f = (k ? fy : fx) * 0.6 - o.desvio[k] * 9;
-        o.vel[k] = (o.vel[k] + f * dt) * Math.pow(0.02, dt);
-        o.desvio[k] += o.vel[k] * dt * 4;
+      // pirueta: a velocidade extra diminui e uma "mola" leva de volta à frente (múltiplo de 360°)
+      for (let i = 0; i < 3; i++) {
+        const volta = Math.PI * 2;
+        const alvoGiro = Math.round(o.extra[i] / volta) * volta;
+        o.w[i] += ((alvoGiro - o.extra[i]) * 14 - o.w[i] * 4.2) * dt;
+        o.extra[i] += o.w[i] * dt;
       }
-      pos[i * 3] = x + o.desvio[0];
-      pos[i * 3 + 1] = y + o.desvio[1];
-      pos[i * 3 + 2] = o.base[2] + rolagem * 0.8;
-      rotacao(
-        o.ang[0] + t * o.giro[0] + mouseY * 0.35 + rolagem * 1.2,
-        o.ang[1] + t * o.giro[1] + mouseX * 0.45,
-        o.ang[2] + t * o.giro[2] + o.vel[0] * 0.8,
-        rot, i * 9
-      );
-    });
-    gl.uniform3fv(uPos, pos);
-    gl.uniformMatrix3fv(uRot, false, rot);
-    gl.uniform2f(uLuz, mouseX, mouseY);
+      o.vEscala += (1 - o.escala) * 160 * dt;
+      o.vEscala *= Math.exp(-10 * dt);
+      o.escala += o.vEscala * dt;
+      o.flash *= Math.exp(-5 * dt);
+      const ax = Math.sin(t * o.giro[0] * 0.6 + o.fase) * 0.42 - mouseY * 0.35 - (o.p[1] - py) * 0.05;
+      const ay = Math.cos(t * o.giro[1] * 0.6 + o.fase) * 0.5 + mouseX * 0.45;
+      const az = o.inclinacao * 1.2 + Math.sin(t * o.giro[2] + o.fase) * 0.25;
+      modelo(o.m, o.p[0], o.p[1], o.p[2], ax + o.extra[0], ay + o.extra[1], az + o.extra[2], o.tam * o.escala * tamTela);
+    }
+    for (let i = brilhos.length - 1; i >= 0; i--) {
+      const b = brilhos[i];
+      b.v[1] -= 2.2 * dt;
+      for (let k = 0; k < 3; k++) { b.v[k] *= Math.exp(-1.8 * dt); b.p[k] += b.v[k] * dt; }
+      b.vida -= dt * 1.1;
+      if (b.vida <= 0) brilhos.splice(i, 1);
+    }
   }
 
-  // ---------------------------------------------------------------- laço de desenho
-  let visivel = true, rodando = false, anterior = 0, tempo = 0;
-  let somaQuadros = 0, contagem = 0, lentoDemais = 0;
+  // ================================================================ desenho
+  function desenhar(t) {
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);
+    gl.disable(gl.BLEND);
+    const { p, u, a } = progUnha;
+    gl.useProgram(p);
+    gl.uniformMatrix4fv(u.uProj, false, proj);
+    gl.uniformMatrix4fv(u.uView, false, vista);
+    gl.uniform2f(u.uLuz, mouseX, mouseY);
+    gl.uniform1f(u.uTempo, t);
+    const aPos = a('aPos'), aNor = a('aNor');
+    gl.bindBuffer(gl.ARRAY_BUFFER, bPos);
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, bNor);
+    gl.enableVertexAttribArray(aNor);
+    gl.vertexAttribPointer(aNor, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bIdx);
+    for (const o of unhas) {
+      const e = ESMALTES[o.esmalte];
+      gl.uniformMatrix4fv(u.uModel, false, o.m);
+      gl.uniform3fv(u.uCor, e.c1);
+      gl.uniform3fv(u.uCor2, e.c2);
+      gl.uniform1f(u.uTipo, e.tipo);
+      gl.uniform1f(u.uFlash, o.flash);
+      gl.drawElements(gl.TRIANGLES, malha.idx.length, gl.UNSIGNED_SHORT, 0);
+    }
+    gl.disableVertexAttribArray(aNor);
+
+    if (brilhos.length) {
+      brilhos.forEach((b, i) => dadosBrilho.set([b.p[0], b.p[1], b.p[2], Math.max(b.vida, 0), b.tam], i * 5));
+      const pb = progBrilho;
+      gl.useProgram(pb.p);
+      gl.uniformMatrix4fv(pb.u.uProj, false, proj);
+      gl.uniformMatrix4fv(pb.u.uView, false, vista);
+      gl.uniform1f(pb.u.uDpr, dpr);
+      gl.bindBuffer(gl.ARRAY_BUFFER, bBrilho);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, dadosBrilho.subarray(0, brilhos.length * 5));
+      const aP = pb.a('aPos'), aV = pb.a('aVida'), aT = pb.a('aTam');
+      gl.enableVertexAttribArray(aP); gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, 20, 0);
+      gl.enableVertexAttribArray(aV); gl.vertexAttribPointer(aV, 1, gl.FLOAT, false, 20, 12);
+      gl.enableVertexAttribArray(aT); gl.vertexAttribPointer(aT, 1, gl.FLOAT, false, 20, 16);
+      gl.disable(gl.DEPTH_TEST);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE);
+      gl.drawArrays(gl.POINTS, 0, brilhos.length);
+      gl.disableVertexAttribArray(aV);
+      gl.disableVertexAttribArray(aT);
+    }
+  }
+
+  // ================================================================ laço com ajuste de qualidade
+  let visivel = true, rodando = false, anterior = 0, tempo = 0, soma = 0, contagem = 0, folga = 0;
+  let nivel = Math.max(0, NIVEIS.findIndex((n) => n <= dpr));
+  window.__cena = { fps: 0, dpr: () => dpr };
   function quadro(agora) {
     if (!visivel || document.hidden) return (rodando = false);
-    const dt = anterior ? Math.min((agora - anterior) / 1000, 0.1) : 1 / 60;
+    const dt = anterior ? Math.min((agora - anterior) / 1000, 0.05) : 1 / 60;
     anterior = agora;
     tempo += dt;
     atualizar(tempo, dt);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
-
-    // mede o desempenho e ajusta a resolução para manter tudo fluido
-    somaQuadros += dt;
-    if (++contagem === 40) {
-      const media = (somaQuadros / contagem) * 1000;
-      if (media > 21 && escala > ESCALA_MIN) {
-        escala = Math.max(ESCALA_MIN, escala - 0.08);
+    desenhar(tempo);
+    soma += dt;
+    if (++contagem === 45) {
+      const media = (soma / contagem) * 1000;
+      window.__cena.fps = Math.round(1000 / media);
+      // se o aparelho estiver sofrendo, reduz a densidade de pixels (continua nítido)
+      if (media > 21 && nivel < NIVEIS.length - 1) {
+        nivel++;
+        dpr = Math.min(NIVEIS[nivel], devicePixelRatio || 1);
         ajustarTamanho();
-      } else if (media < 14 && escala < ESCALA_MAX) {
-        escala = Math.min(ESCALA_MAX, escala + 0.04);
+      } else if (media < 17.5 && nivel > 0 && folga++ > 3) {
+        // aparelho com folga: aumenta a nitidez
+        nivel--;
+        dpr = Math.min(NIVEIS[nivel], devicePixelRatio || 1);
         ajustarTamanho();
+        folga = 0;
       }
-      // aparelho muito fraco: congela num quadro bonito em vez de travar a página
-      if (media > 40 && escala <= ESCALA_MIN) lentoDemais++;
-      if (lentoDemais >= 3) {
-        cartao.classList.add('cena-parada');
-        escala = ESCALA_MAX; // um único quadro nítido, sem animação
-        ajustarTamanho();
-        desenharParado();
-        return (rodando = false);
-      }
-      somaQuadros = contagem = 0;
+      soma = contagem = 0;
     }
     requestAnimationFrame(quadro);
   }
   function iniciar() {
-    if (rodando || menosMovimento || cartao.classList.contains('cena-parada')) return;
+    if (rodando) return;
     rodando = true;
     anterior = 0;
     requestAnimationFrame(quadro);
   }
-  function desenharParado() {
-    atualizar(tempo || 2, 0.016);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
-  }
 
   new IntersectionObserver(([e]) => {
     visivel = e.isIntersecting;
-    if (visivel) iniciar();
+    if (visivel && !menosMovimento) iniciar();
   }).observe(cartao);
-  document.addEventListener('visibilitychange', () => !document.hidden && visivel && iniciar());
+  document.addEventListener('visibilitychange', () => !document.hidden && visivel && !menosMovimento && iniciar());
   addEventListener('scroll', () => {
     const r = cartao.getBoundingClientRect();
     rolagem = Math.min(Math.max(-r.top / Math.max(r.height, 1), 0), 1);
   }, { passive: true });
   let larguraJanela = innerWidth;
   addEventListener('resize', () => {
-    if (Math.abs(innerWidth - larguraJanela) < 2 && celular) return; // ignora a barra do navegador do celular
+    if (innerWidth === larguraJanela && matchMedia('(max-width: 720px)').matches) return; // barra do navegador do celular
     larguraJanela = innerWidth;
     ajustarTamanho();
-    if (!rodando) desenharParado();
+    if (menosMovimento) { atualizar(3, 0.016); desenhar(3); }
   });
   canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); semSuporte(); });
 
   ajustarTamanho();
-  desenharParado();
   cartao.classList.add('cena-pronta');
-  iniciar();
+  if (menosMovimento) {
+    // sem animação: mostra as unhas já no lugar
+    unhas.forEach((o) => (o.p = [...o.base]));
+    for (let i = 0; i < 5; i++) atualizar(3, 0.016);
+    desenhar(3);
+  } else iniciar();
 })();

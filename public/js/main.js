@@ -101,6 +101,18 @@ function aoRolar() {
   const naAgenda = agenda.top < innerHeight * 0.6 && agenda.bottom > innerHeight * 0.3;
   barraCelular.classList.toggle('visivel', y > innerHeight * 0.6 && !naAgenda);
   desenharFita();
+  profundidade();
+}
+// fotos dos trabalhos se movem um pouco mais devagar que a página (sensação de profundidade)
+let moveres = [];
+function profundidade() {
+  if (menosMovimento) return;
+  for (const m of moveres) {
+    const r = m.parentElement.getBoundingClientRect();
+    if (r.bottom < -50 || r.top > innerHeight + 50) continue;
+    const centro = (r.top + r.height / 2 - innerHeight / 2) / innerHeight;
+    m.style.transform = `translate3d(0, ${(-centro * 6).toFixed(2)}%, 0)`;
+  }
 }
 addEventListener('scroll', () => {
   if (!pendente) {
@@ -214,13 +226,15 @@ async function carregarGaleria() {
     img.complete ? pronta() : img.addEventListener('load', pronta);
     galeria.append(
       el('button', { class: 'card', type: 'button', 'data-cursor': 'Ver', onclick: () => abrirLightbox(i) },
-        el('div', { class: 'card__img' }, img),
+        el('div', { class: 'card__img' }, el('div', { class: 'card__mover' }, img)),
         el('div', { class: 'card__rodape' },
           el('span', { class: 'card__titulo' }, f.legenda),
           el('span', { class: 'micro' }, String(i + 1).padStart(2, '0'))))
     );
   });
   revelar($$('.card'));
+  moveres = $$('.card__mover');
+  aoRolar();
   $('#hero-fallback').style.backgroundImage = `url("${fotos[0].url}")`;
 }
 
@@ -290,13 +304,15 @@ function montarServicos() {
       escolherServico(s, false);
       rolarAte($('#agendar'), 'start');
     };
-    const linha = el('li', { class: 'servico revelar', tabindex: '0', role: 'button', 'aria-label': `Agendar ${s.nome}, ${brl(s.preco)}`, 'data-cursor': 'Agendar', style: { '--atraso': `${i * 0.06}s` } },
+    const linha = el('li', { class: 'servico revelar', tabindex: '0', role: 'button', 'aria-label': `Agendar ${s.nome}, ${brl(s.preco)}`, style: { '--atraso': `${i * 0.06}s` } },
       el('span', { class: 'servico__num' }, String(i + 1).padStart(2, '0')),
       el('span', { class: 'servico__nome' }, s.nome, s.descricao ? el('small', { class: 'servico__desc' }, s.descricao) : ''),
       el('span', { class: 'servico__tempo' }, duracaoTexto(s.duracao)),
       el('span', { class: 'servico__preco' }, brl(s.preco)),
       el('span', { class: 'servico__seta', 'aria-hidden': 'true' }, '→'));
     linha.addEventListener('click', agendarEste);
+    linha.addEventListener('mouseenter', () => mostrarPrevia(i));
+    linha.addEventListener('mouseleave', esconderPrevia);
     linha.addEventListener('keydown', (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), agendarEste()));
     lista.append(linha);
 
@@ -308,6 +324,24 @@ function montarServicos() {
   });
   revelar($$('.servico'));
 }
+
+// prévia de foto que segue o mouse sobre a lista de serviços
+const previa = $('#previa');
+let previaAtiva = false;
+function mostrarPrevia(i) {
+  if (!temMouse || !fotos.length) return;
+  $('img', previa).src = fotos[(i * 3 + 1) % fotos.length].url;
+  previa.classList.add('visivel');
+  previaAtiva = true;
+}
+function esconderPrevia() {
+  previa.classList.remove('visivel');
+  previaAtiva = false;
+}
+addEventListener('pointermove', (e) => {
+  if (!previaAtiva) return;
+  previa.style.transform = `translate3d(${e.clientX - 110}px, ${e.clientY - 137}px, 0) rotate(${Math.max(-8, Math.min(8, (e.movementX || 0) * 0.4))}deg)`;
+}, { passive: true });
 
 // =============================================================== AGENDAMENTO
 function marcar(container, seletor, valor, atributo) {
@@ -331,6 +365,7 @@ function escolherServico(s, rolar = true) {
   $('#escolhido-info').textContent = `${brl(s.preco)} · ${duracaoTexto(s.duracao)}`;
   setTimeout(() => mostrarServicoEscolhido(true), rolar ? 250 : 0);
   montarDias();
+  carregarSugestoes(s);
   $('#passo-data').hidden = false;
   $('#passo-dados').hidden = true;
   atualizarEtapas();
@@ -341,6 +376,45 @@ $('#trocar-servico').addEventListener('click', () => {
   mostrarServicoEscolhido(false);
   $$('.opcao').forEach((o) => o.classList.remove('pronto'));
 });
+
+function nomeDoDia(iso) {
+  const i = Math.round((new Date(iso + 'T12:00:00Z') - new Date(config.hoje + 'T12:00:00Z')) / 864e5);
+  if (i === 0) return 'Hoje';
+  if (i === 1) return 'Amanhã';
+  const semana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  const d = new Date(iso + 'T12:00:00Z');
+  return `${semana[d.getUTCDay()]} ${d.getUTCDate()}`;
+}
+async function carregarSugestoes(s) {
+  const caixa = $('#rapido');
+  const lista = $('#rapido-lista');
+  caixa.hidden = false;
+  lista.replaceChildren(el('div', { class: 'carregando' }, el('i'), el('i'), el('i')));
+  try {
+    const { corpo } = await buscarJson(`/api/sugestoes?servico=${s.id}`, {}, { tentativas: 2, limite: 12000 });
+    if (escolha.servico?.id !== s.id) return;
+    const sugestoes = corpo.sugestoes || [];
+    if (!sugestoes.length) {
+      caixa.hidden = true;
+      return;
+    }
+    lista.replaceChildren(
+      ...sugestoes.map((sg, i) =>
+        el('button', { type: 'button', style: { '--atraso': `${i * 0.06}s` }, onclick: () => reservarRapido(sg) },
+          el('small', {}, nomeDoDia(sg.data)),
+          el('strong', {}, sg.inicio)))
+    );
+  } catch {
+    caixa.hidden = true; // sem atalhos: a cliente escolhe pelo calendário normalmente
+  }
+}
+async function reservarRapido(sg) {
+  await escolherDia(sg.data, false);
+  if ($(`.hora[data-hora="${sg.inicio}"]`)) escolherHora(sg.inicio);
+  else aviso('Esse horário acabou de ser ocupado. Escolha outro abaixo.');
+  const botaoDia = $(`.dia[data-data="${sg.data}"]`);
+  if (botaoDia) botaoDia.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+}
 
 function montarDias() {
   const dias = $('#dias');
@@ -367,13 +441,13 @@ function montarDias() {
 $('.dias__seta--esq').onclick = () => $('#dias').scrollBy({ left: -300, behavior: 'smooth' });
 $('.dias__seta--dir').onclick = () => $('#dias').scrollBy({ left: 300, behavior: 'smooth' });
 
-function escolherDia(iso) {
+function escolherDia(iso, rolar = true) {
   escolha.data = iso;
   escolha.hora = null;
   marcar($('#dias'), '.dia', iso, 'data');
   $('#passo-dados').hidden = true;
   atualizarEtapas();
-  carregarHorarios(true);
+  return carregarHorarios(rolar);
 }
 
 async function carregarHorarios(rolar) {
