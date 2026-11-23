@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0c090e" />
+  <meta name="theme-color" content="#0b0b0d" />
   <title>Maya Souza Nails | Agende seu horário</title>
   <meta name="description" content="Alongamento soft gel, esmaltação em gel e manutenção. Veja os trabalhos e agende online." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,500;1,700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
@@ -16,240 +16,190 @@
     <symbol id="icone-whats" viewBox="0 0 32 32"><path fill="currentColor" d="M16 3C8.8 3 3 8.7 3 15.8c0 2.5.7 4.9 2 7L3 29l6.4-2c2 1.1 4.3 1.7 6.6 1.7 7.2 0 13-5.7 13-12.8S23.2 3 16 3zm0 23.4c-2.1 0-4.2-.6-6-1.7l-.4-.3-3.8 1.2 1.2-3.7-.3-.4c-1.2-1.8-1.8-3.9-1.8-6 0-5.9 4.9-10.7 11-10.7s11 4.8 11 10.7-4.9 10.9-10.9 10.9zm6-8c-.3-.2-1.9-.9-2.2-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-1 1.2-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.6-1.6-1-.9-1.6-1.9-1.8-2.2-.2-.3 0-.5.1-.7l.5-.6c.2-.2.2-.3.3-.6.1-.2 0-.4 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.1-1.2 2.7s1.2 3.2 1.4 3.4c.2.2 2.4 3.6 5.8 5 .8.3 1.4.5 1.9.7.8.3 1.5.2 2.1.1.6-.1 1.9-.8 2.2-1.5.3-.7.3-1.4.2-1.5-.1-.3-.3-.4-.6-.5z"/></symbol>
   </svg>
 
-  <!-- abertura animada (vidro de esmalte pingando) -->
-  <div class="abertura" id="abertura" aria-hidden="true">
-    <div class="abertura__esmalte">
-      <span class="abertura__tampa"></span>
-      <span class="abertura__vidro"><i></i></span>
-    </div>
-    <span class="abertura__gota"></span>
-  </div>
-
-  <div class="progresso-scroll" id="progresso-scroll"></div>
+  <!-- cursor (só no computador) -->
+  <div class="cursor" id="cursor" aria-hidden="true"><span class="cursor__texto"></span></div>
 
   <header class="topo" id="topo">
-    <div class="container topo__conteudo">
-      <a href="#inicio" class="logo"><span class="logo__ponto"></span><span data-nome>Studio</span></a>
-      <nav class="menu" id="menu">
-        <a href="#trabalhos">Trabalhos</a>
-        <a href="#como-funciona">Como funciona</a>
-        <a href="#servicos">Serviços</a>
-        <a href="#agendar">Agendar</a>
-        <span class="menu__indicador" id="menu-indicador"></span>
-      </nav>
-      <a href="#agendar" class="botao botao--pequeno botao--brilho topo__cta">Agendar</a>
-      <button class="menu-botao" id="menu-botao" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu-mobile">
-        <span></span><span></span>
+    <a href="#inicio" class="marca" aria-label="Início"><i></i><span data-nome>Maya Souza</span></a>
+    <div class="topo__acoes">
+      <a href="#agendar" class="pilula pilula--acento" data-cursor="Agendar">Agendar <i class="ponto"></i></a>
+      <button class="pilula" id="menu-botao" type="button" aria-expanded="false" aria-controls="menu">
+        <span class="menu-rotulo">Menu</span> <i class="pontos"><b></b><b></b></i>
       </button>
     </div>
   </header>
 
-  <!-- menu do celular -->
-  <div class="menu-mobile" id="menu-mobile" hidden>
+  <!-- menu em tela cheia -->
+  <div class="menu" id="menu" hidden>
     <nav>
       <a href="#inicio"><small>01</small>Início</a>
       <a href="#trabalhos"><small>02</small>Trabalhos</a>
-      <a href="#como-funciona"><small>03</small>Como funciona</a>
-      <a href="#servicos"><small>04</small>Serviços</a>
-      <a href="#agendar"><small>05</small>Agendar horário</a>
+      <a href="#servicos"><small>03</small>Serviços</a>
+      <a href="#como-funciona"><small>04</small>Como funciona</a>
+      <a href="#agendar"><small>05</small>Agendar</a>
     </nav>
-    <a class="botao botao--whats menu-mobile__whats" data-whats target="_blank" rel="noopener">Falar no WhatsApp</a>
+    <div class="menu__rodape">
+      <a class="pilula pilula--whats" data-whats target="_blank" rel="noopener">WhatsApp</a>
+      <a class="pilula" data-insta target="_blank" rel="noopener">Instagram</a>
+    </div>
   </div>
 
   <main>
-    <!-- HERO -->
+    <!-- HERO: cartão com 3D -->
     <section id="inicio" class="hero">
-      <div class="hero__aurora" aria-hidden="true"><span></span><span></span><span></span></div>
-      <canvas class="hero__brilhos" id="brilhos" aria-hidden="true"></canvas>
-
-      <div class="container hero__conteudo">
-        <div class="hero__texto">
-          <span class="etiqueta revelar">Alongamento • Soft Gel • Esmaltação em Gel</span>
-          <h1 class="titulo-animado" id="titulo">
-            <span class="linha"><span>Unhas</span> <span>que</span> <span>brilham</span></span>
-            <span class="linha"><em><span>do</span> <span>seu</span> <span>jeito</span></em></span>
-          </h1>
-          <p class="revelar" data-slogan></p>
-          <div class="hero__botoes revelar">
-            <a href="#agendar" class="botao botao--brilho">Agendar meu horário <span class="seta">→</span></a>
-            <a href="#trabalhos" class="botao botao--vidro">Ver trabalhos</a>
-          </div>
-          <dl class="numeros revelar" id="numeros">
-            <div><dt data-contar="servicos">0</dt><dd>serviços</dd></div>
-            <div><dt data-contar="fotos">0</dt><dd>trabalhos no portfólio</dd></div>
-            <div><dt><small>R$</small> <span data-contar="preco">0</span></dt><dd>a partir de</dd></div>
-          </dl>
-        </div>
-
-        <div class="hero__fotos" id="hero-fotos" aria-hidden="true">
-          <div class="hero__foto hero__foto--1"></div>
-          <div class="hero__foto hero__foto--2"></div>
-          <div class="hero__foto hero__foto--3"></div>
-          <div class="hero__cartao-flutuante">
-            <span>💅</span>
-            <div><strong>Agenda online</strong><small>aberta 24h</small></div>
-          </div>
+      <div class="hero__cartao" id="hero-cartao">
+        <canvas id="cena" aria-hidden="true"></canvas>
+        <div class="hero__fallback" id="hero-fallback" aria-hidden="true"></div>
+        <div class="hero__sobre">
+          <p class="hero__chamada revelar">Alongamento soft gel, esmaltação em gel e manutenção — com hora marcada.</p>
         </div>
       </div>
-      <a href="#trabalhos" class="hero__rolar" aria-label="Rolar para os trabalhos"><span></span></a>
+      <div class="marcas" aria-hidden="true">
+        <span>+</span><span>+</span><span class="marcas__texto">Role para explorar</span><span>+</span><span>+</span>
+      </div>
     </section>
 
-    <!-- GALERIA -->
+    <!-- INTRO -->
+    <section class="intro secao">
+      <svg class="fita" id="fita" viewBox="0 0 1200 1400" preserveAspectRatio="none" aria-hidden="true">
+        <path id="fita-caminho" d="M-40 120 C 260 60, 380 420, 240 560 S 80 900, 420 980 S 1080 860, 1000 1180 S 760 1420, 1240 1360" />
+      </svg>
+      <h1 class="titulo-grande titulo-revelar">
+        <span class="recuo">Unhas que brilham,</span>
+        <span>do seu jeito.</span>
+      </h1>
+      <div class="intro__lado">
+        <p class="revelar" data-slogan>Unhas impecáveis, do jeitinho que você sonhou.</p>
+        <a href="#servicos" class="pilula pilula--clara revelar" data-cursor="Ver">Ver serviços <i class="ponto"></i></a>
+      </div>
+    </section>
+
+    <!-- TRABALHOS -->
     <section id="trabalhos" class="secao">
-      <div class="container">
-        <div class="secao__cabecalho">
-          <span class="etiqueta revelar">Portfólio</span>
-          <h2 class="titulo-secao">Unhas que já <em>passaram por aqui</em></h2>
-          <p class="secao__sub revelar">Toque em uma foto para ampliar. Gostou? Toque em <strong>“Quero esse estilo”</strong> e ele já vai anotado no seu agendamento.</p>
-        </div>
-        <div class="galeria" id="galeria"></div>
+      <div class="secao__cabeca">
+        <h2 class="titulo-medio titulo-revelar">Trabalhos</h2>
+        <p class="micro revelar">Uma seleção de unhas feitas aqui. Toque para ampliar — gostou? Peça o mesmo estilo.</p>
       </div>
-    </section>
-
-    <!-- COMO FUNCIONA -->
-    <section id="como-funciona" class="secao secao--destaque">
-      <div class="container">
-        <div class="secao__cabecalho secao__cabecalho--centro">
-          <span class="etiqueta revelar">Simples assim</span>
-          <h2 class="titulo-secao">Como <em>funciona</em></h2>
-        </div>
-        <ol class="como" id="como">
-          <i class="como__linha" aria-hidden="true"><i></i></i>
-          <li class="revelar">
-            <span class="como__icone">💅</span>
-            <h3>Escolha o serviço</h3>
-            <p>Veja os trabalhos, os preços e escolha o que combina com você.</p>
-          </li>
-          <li class="revelar" style="--atraso: .15s">
-            <span class="como__icone">📅</span>
-            <h3>Marque dia e hora</h3>
-            <p>Só aparecem os horários livres de verdade. Sem troca de mensagens.</p>
-          </li>
-          <li class="revelar" style="--atraso: .3s">
-            <span class="como__icone">✨</span>
-            <h3>É só vir e brilhar</h3>
-            <p>Você recebe a confirmação e pode avisar pelo WhatsApp com um toque.</p>
-          </li>
-        </ol>
-      </div>
+      <div class="galeria" id="galeria"></div>
     </section>
 
     <!-- SERVIÇOS -->
     <section id="servicos" class="secao">
-      <div class="container">
-        <div class="secao__cabecalho">
-          <span class="etiqueta revelar">Serviços</span>
-          <h2 class="titulo-secao">Cuidados para <em>todos os estilos</em></h2>
-          <p class="secao__sub revelar">Toque em um serviço para já começar o agendamento.</p>
-        </div>
-        <div class="servicos" id="lista-servicos"></div>
+      <div class="secao__cabeca">
+        <h2 class="titulo-medio titulo-revelar">Serviços</h2>
+        <p class="micro revelar">Toque em um serviço para já começar o agendamento.</p>
       </div>
+      <ol class="servicos" id="lista-servicos"></ol>
+    </section>
+
+    <!-- COMO FUNCIONA -->
+    <section id="como-funciona" class="secao">
+      <div class="secao__cabeca">
+        <h2 class="titulo-medio titulo-revelar">Como funciona</h2>
+      </div>
+      <ol class="como">
+        <li class="revelar"><span class="como__num">01</span><h3>Escolha o serviço</h3><p>Veja os trabalhos e os preços, e escolha o que combina com você.</p></li>
+        <li class="revelar" style="--atraso:.1s"><span class="como__num">02</span><h3>Marque dia e hora</h3><p>Só aparecem horários livres de verdade. Sem troca de mensagens.</p></li>
+        <li class="revelar" style="--atraso:.2s"><span class="como__num">03</span><h3>Venha brilhar</h3><p>Salve no calendário do celular e receba o lembrete antes do horário.</p></li>
+      </ol>
     </section>
 
     <!-- AGENDAMENTO -->
-    <section id="agendar" class="secao secao--destaque">
-      <div class="container container--estreito">
-        <div class="secao__cabecalho secao__cabecalho--centro">
-          <span class="etiqueta revelar">Agendamento online</span>
-          <h2 class="titulo-secao">Reserve seu <em>horário</em></h2>
-          <p class="secao__sub revelar">Leva menos de 1 minuto. 💖</p>
+    <section id="agendar" class="secao">
+      <div class="secao__cabeca">
+        <h2 class="titulo-medio titulo-revelar">Agendar</h2>
+        <p class="micro revelar">Leva menos de um minuto.</p>
+      </div>
+
+      <form id="form-agendamento" class="agenda revelar" novalidate>
+        <ol class="etapas" id="etapas" aria-hidden="true">
+          <li class="ativa">Serviço</li><li>Dia</li><li>Horário</li><li>Dados</li>
+          <i class="etapas__barra" id="etapas-barra"></i>
+        </ol>
+
+        <div class="passo" id="passo-servico">
+          <h3><span>01</span> Qual serviço?</h3>
+          <div class="escolhido" id="servico-escolhido" hidden>
+            <div><strong id="escolhido-nome"></strong><small id="escolhido-info"></small></div>
+            <button type="button" class="pilula" id="trocar-servico">Trocar</button>
+          </div>
+          <div class="opcoes" id="opcoes-servico"></div>
         </div>
 
-        <form id="form-agendamento" class="cartao agendamento revelar" novalidate>
-          <ol class="etapas" id="etapas" aria-hidden="true">
-            <i class="etapas__barra" id="etapas-barra"></i>
-            <li class="ativa"><span>1</span>Serviço</li>
-            <li><span>2</span>Dia</li>
-            <li><span>3</span>Horário</li>
-            <li><span>4</span>Dados</li>
-          </ol>
-
-          <div class="passo" id="passo-servico">
-            <h3><span class="passo__num">1</span> Qual serviço?</h3>
-            <div class="escolhido" id="servico-escolhido" hidden>
-              <span class="escolhido__icone" id="escolhido-icone"></span>
-              <div class="escolhido__texto"><strong id="escolhido-nome"></strong><small id="escolhido-info"></small></div>
-              <button type="button" class="escolhido__trocar" id="trocar-servico">Trocar</button>
-            </div>
-            <div class="opcoes-servico" id="opcoes-servico"></div>
+        <div class="passo" id="passo-data" hidden>
+          <h3><span>02</span> Qual dia?</h3>
+          <div class="dias-moldura">
+            <button type="button" class="dias__seta dias__seta--esq" aria-label="Dias anteriores">←</button>
+            <div class="dias" id="dias"></div>
+            <button type="button" class="dias__seta dias__seta--dir" aria-label="Próximos dias">→</button>
           </div>
-
-          <div class="passo" id="passo-data" hidden>
-            <h3><span class="passo__num">2</span> Qual dia?</h3>
-            <div class="dias-moldura">
-              <button type="button" class="dias__seta dias__seta--esq" aria-label="Dias anteriores">‹</button>
-              <div class="dias" id="dias"></div>
-              <button type="button" class="dias__seta dias__seta--dir" aria-label="Próximos dias">›</button>
-            </div>
-          </div>
-
-          <div class="passo" id="passo-hora" hidden>
-            <h3><span class="passo__num">3</span> Qual horário?</h3>
-            <div id="horas"></div>
-          </div>
-
-          <div class="passo" id="passo-dados" hidden>
-            <h3><span class="passo__num">4</span> Seus dados</h3>
-            <div class="campos">
-              <label class="campo">
-                <input type="text" name="nome" autocomplete="name" maxlength="80" required placeholder=" " />
-                <span>Seu nome</span>
-                <i class="campo__ok" aria-hidden="true">✓</i>
-              </label>
-              <label class="campo">
-                <input type="tel" name="telefone" autocomplete="tel" inputmode="tel" required placeholder=" " />
-                <span>WhatsApp com DDD</span>
-                <i class="campo__ok" aria-hidden="true">✓</i>
-              </label>
-              <label class="campo campos__inteiro">
-                <textarea name="observacoes" rows="2" maxlength="300" placeholder=" "></textarea>
-                <span>Observações (opcional)</span>
-              </label>
-            </div>
-            <div class="resumo" id="resumo"></div>
-            <p class="erro" id="erro" role="alert"></p>
-            <button type="submit" class="botao botao--brilho botao--largo" id="botao-confirmar">Confirmar agendamento</button>
-          </div>
-        </form>
-
-        <div class="cartao sucesso" id="sucesso" hidden>
-          <canvas class="sucesso__confete" id="confete" aria-hidden="true"></canvas>
-          <div class="sucesso__check" aria-hidden="true">
-            <svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" /><path d="M15 27l7 7 15-16" /></svg>
-          </div>
-          <h3>Horário reservado!</h3>
-          <p id="sucesso-texto"></p>
-          <a class="botao botao--whats" id="sucesso-whats" target="_blank" rel="noopener">Avisar pelo WhatsApp</a>
-          <button class="botao botao--vidro" id="novo-agendamento" type="button">Fazer outro agendamento</button>
         </div>
+
+        <div class="passo" id="passo-hora" hidden>
+          <h3><span>03</span> Qual horário?</h3>
+          <div id="horas"></div>
+        </div>
+
+        <div class="passo" id="passo-dados" hidden>
+          <h3><span>04</span> Seus dados</h3>
+          <div class="campos">
+            <label class="campo">
+              <input type="text" name="nome" autocomplete="name" maxlength="80" required placeholder=" " />
+              <span>Seu nome</span><i class="campo__ok" aria-hidden="true">✓</i>
+            </label>
+            <label class="campo">
+              <input type="tel" name="telefone" autocomplete="tel" inputmode="tel" required placeholder=" " />
+              <span>WhatsApp com DDD</span><i class="campo__ok" aria-hidden="true">✓</i>
+            </label>
+            <label class="campo campos__inteiro">
+              <textarea name="observacoes" rows="2" maxlength="300" placeholder=" "></textarea>
+              <span>Observações (opcional)</span>
+            </label>
+          </div>
+          <div class="resumo" id="resumo"></div>
+          <p class="erro" id="erro" role="alert"></p>
+          <button type="submit" class="botao-grande" id="botao-confirmar"><span>Confirmar agendamento</span> <i>→</i></button>
+        </div>
+      </form>
+
+      <div class="agenda sucesso" id="sucesso" hidden>
+        <canvas class="sucesso__confete" id="confete" aria-hidden="true"></canvas>
+        <div class="sucesso__check" aria-hidden="true"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" /><path d="M15 27l7 7 15-16" /></svg></div>
+        <h3>Horário reservado!</h3>
+        <p id="sucesso-texto"></p>
+        <div class="sucesso__acoes">
+          <a class="pilula pilula--clara" id="cal-google" target="_blank" rel="noopener">📅 Google Agenda</a>
+          <a class="pilula pilula--clara" id="cal-ics">📅 iPhone / Outros</a>
+        </div>
+        <a class="botao-grande botao-grande--whats" id="sucesso-whats" target="_blank" rel="noopener"><span>Avisar pelo WhatsApp</span> <i>→</i></a>
+        <button class="pilula" id="novo-agendamento" type="button">Fazer outro agendamento</button>
       </div>
     </section>
   </main>
 
   <footer class="rodape">
-    <div class="container rodape__conteudo">
+    <a href="#agendar" class="rodape__grande" data-cursor="Agendar">
+      <span class="micro">Pronta para brilhar?</span>
+      <span class="rodape__chamada">Vamos agendar <i>→</i></span>
+    </a>
+    <div class="rodape__linhas">
       <div>
-        <strong class="logo"><span class="logo__ponto"></span><span data-nome>Studio</span></strong>
+        <strong data-nome>Maya Souza Nails</strong>
         <p data-endereco></p>
       </div>
       <div class="rodape__links">
         <a data-whats target="_blank" rel="noopener">WhatsApp</a>
-        <a id="link-insta" target="_blank" rel="noopener">Instagram</a>
+        <a data-insta target="_blank" rel="noopener">Instagram</a>
       </div>
     </div>
-    <p class="rodape__copy">© <span id="ano"></span> <span data-nome></span>. Feito com carinho.</p>
+    <p class="rodape__copy">© <span id="ano"></span> <span data-nome></span></p>
   </footer>
-
-  <!-- WhatsApp flutuante (computador) -->
-  <a class="whats-flutuante" data-whats target="_blank" rel="noopener" aria-label="Falar no WhatsApp">
-    <svg width="28" height="28" aria-hidden="true"><use href="#icone-whats" /></svg>
-  </a>
 
   <!-- barra fixa no celular -->
   <div class="barra-celular" id="barra-celular">
-    <a href="#agendar" class="botao botao--brilho">Agendar horário</a>
+    <a href="#agendar" class="pilula pilula--acento">Agendar horário <i class="ponto"></i></a>
     <a class="barra-celular__whats" data-whats target="_blank" rel="noopener" aria-label="Falar no WhatsApp">
-      <svg width="24" height="24" aria-hidden="true"><use href="#icone-whats" /></svg>
+      <svg width="22" height="22" aria-hidden="true"><use href="#icone-whats" /></svg>
     </a>
   </div>
 
@@ -257,18 +207,19 @@
 
   <div class="lightbox" id="lightbox" hidden>
     <button class="lightbox__fechar" type="button" aria-label="Fechar">×</button>
-    <button class="lightbox__nav lightbox__nav--ant" type="button" aria-label="Anterior">‹</button>
+    <button class="lightbox__nav lightbox__nav--ant" type="button" aria-label="Anterior">←</button>
     <figure>
       <img alt="" />
       <figcaption>
         <span class="lightbox__legenda"></span>
-        <button type="button" class="botao botao--brilho botao--pequeno" id="quero-estilo">Quero esse estilo ✨</button>
+        <button type="button" class="pilula pilula--acento" id="quero-estilo">Quero esse estilo <i class="ponto"></i></button>
       </figcaption>
     </figure>
-    <button class="lightbox__nav lightbox__nav--prox" type="button" aria-label="Próxima">›</button>
+    <button class="lightbox__nav lightbox__nav--prox" type="button" aria-label="Próxima">→</button>
     <div class="lightbox__contador"></div>
   </div>
 
-  <script src="/js/main.js"></script>
+  <script src="/js/cena.js" defer></script>
+  <script src="/js/main.js" defer></script>
 </body>
 </html>

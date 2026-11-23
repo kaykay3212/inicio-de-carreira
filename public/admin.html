@@ -4,42 +4,158 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex" />
-  <meta name="theme-color" content="#0c090e" />
+  <meta name="theme-color" content="#0b0b0d" />
   <title>Painel | Agendamentos</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/admin.css" />
 </head>
 <body>
-  <header class="topo topo--rolado">
-    <div class="container topo__conteudo">
-      <a href="/" class="logo"><span class="logo__ponto"></span>Painel de Agendamentos</a>
-      <a href="/" class="botao botao--pequeno botao--vidro">Ver site</a>
+  <header class="topo">
+    <a href="/" class="marca"><i></i><span>Painel</span></a>
+    <div class="topo__acoes">
+      <a href="/" class="pilula" target="_blank">Ver site <i>↗</i></a>
+      <button class="pilula" id="sair" type="button" hidden>Sair</button>
     </div>
   </header>
 
-  <main class="container admin">
-    <form id="login" class="cartao admin__login">
-      <h2>Entrar</h2>
-      <label>Senha do painel
-        <input type="password" name="senha" autocomplete="current-password" required />
-      </label>
+  <main class="conteudo">
+    <!-- LOGIN -->
+    <form id="login" class="cartao login">
+      <span class="rotulo">Área da Maya</span>
+      <h1>Entrar no painel</h1>
+      <label class="campo"><span>Senha</span><input type="password" name="senha" autocomplete="current-password" required /></label>
       <p class="erro" id="erro-login" role="alert"></p>
-      <button class="botao" type="submit">Entrar</button>
+      <button class="botao" type="submit">Entrar <i>→</i></button>
     </form>
 
     <section id="painel" hidden>
-      <div class="admin__barra">
-        <h2>Próximos horários</h2>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-          <label style="flex-direction:row;align-items:center;gap:.4rem"><input type="checkbox" id="mostrar-cancelados" /> Mostrar cancelados</label>
-          <button class="botao botao--pequeno botao--contorno" id="atualizar" type="button">Atualizar</button>
-          <button class="botao botao--pequeno botao--contorno" id="sair" type="button">Sair</button>
+      <nav class="abas" id="abas" role="tablist">
+        <button role="tab" data-aba="agenda" aria-selected="true">Agenda <b id="badge-agenda"></b></button>
+        <button role="tab" data-aba="lembretes">Lembretes</button>
+        <button role="tab" data-aba="folgas">Folgas</button>
+        <button role="tab" data-aba="servicos">Serviços</button>
+        <button role="tab" data-aba="horarios">Horários</button>
+        <button role="tab" data-aba="avisos">Avisos</button>
+      </nav>
+
+      <!-- AGENDA -->
+      <div class="aba" data-aba="agenda">
+        <div class="aba__topo">
+          <div>
+            <span class="rotulo">Próximos horários</span>
+            <h2>Agenda</h2>
+          </div>
+          <div class="aba__ferramentas">
+            <label class="chave"><input type="checkbox" id="mostrar-cancelados" /><span></span>Cancelados</label>
+            <button class="pilula" id="atualizar" type="button">↻ Atualizar</button>
+          </div>
+        </div>
+        <p class="dica" id="dica-alerta" hidden>
+          Deixe esta página aberta: ela se atualiza sozinha e toca um som quando chega agendamento novo.
+          <button class="link" id="ativar-alerta" type="button">Ativar alerta do navegador</button>
+        </p>
+        <div id="lista-agenda"></div>
+      </div>
+
+      <!-- LEMBRETES -->
+      <div class="aba" data-aba="lembretes" hidden>
+        <div class="aba__topo">
+          <div>
+            <span class="rotulo">Evite faltas</span>
+            <h2>Lembretes</h2>
+          </div>
+          <div class="segmento" id="dia-lembrete">
+            <button type="button" data-dia="0">Hoje</button>
+            <button type="button" data-dia="1" aria-pressed="true">Amanhã</button>
+          </div>
+        </div>
+        <p class="dica">Toque em “Enviar lembrete” e o WhatsApp abre com a mensagem pronta para a cliente.</p>
+        <div id="lista-lembretes"></div>
+      </div>
+
+      <!-- FOLGAS -->
+      <div class="aba" data-aba="folgas" hidden>
+        <div class="aba__topo">
+          <div>
+            <span class="rotulo">Dias e horários fechados</span>
+            <h2>Folgas e bloqueios</h2>
+          </div>
+        </div>
+        <form class="cartao formulario" id="form-folga">
+          <div class="grade">
+            <label class="campo"><span>Data</span><input type="date" name="data" required /></label>
+            <label class="campo"><span>Até (opcional)</span><input type="date" name="ate" /></label>
+          </div>
+          <label class="chave"><input type="checkbox" name="diaInteiro" checked /><span></span>Dia inteiro</label>
+          <div class="grade" id="folga-horas" hidden>
+            <label class="campo"><span>Das</span><input type="time" name="inicio" step="1800" /></label>
+            <label class="campo"><span>Até</span><input type="time" name="fim" step="1800" /></label>
+          </div>
+          <label class="campo"><span>Motivo (só você vê)</span><input type="text" name="motivo" maxlength="80" placeholder="Ex.: folga, feriado, médico" /></label>
+          <p class="erro" id="erro-folga" role="alert"></p>
+          <button class="botao" type="submit">Bloquear <i>→</i></button>
+        </form>
+        <div id="lista-folgas"></div>
+      </div>
+
+      <!-- SERVIÇOS -->
+      <div class="aba" data-aba="servicos" hidden>
+        <div class="aba__topo">
+          <div>
+            <span class="rotulo">O que aparece no site</span>
+            <h2>Serviços e preços</h2>
+          </div>
+        </div>
+        <div id="lista-servicos"></div>
+        <button class="pilula pilula--larga" id="add-servico" type="button">+ Adicionar serviço</button>
+        <div class="salvar">
+          <p class="erro" id="erro-servicos" role="alert"></p>
+          <button class="botao" id="salvar-servicos" type="button">Salvar serviços <i>→</i></button>
         </div>
       </div>
-      <div id="lista"></div>
+
+      <!-- HORÁRIOS -->
+      <div class="aba" data-aba="horarios" hidden>
+        <div class="aba__topo">
+          <div>
+            <span class="rotulo">Quando você atende</span>
+            <h2>Horários</h2>
+          </div>
+        </div>
+        <div class="cartao" id="lista-dias"></div>
+        <div class="cartao formulario">
+          <label class="chave"><input type="checkbox" id="tem-pausa" /><span></span>Pausa para almoço</label>
+          <div class="grade" id="pausa-horas">
+            <label class="campo"><span>Das</span><input type="time" id="pausa-inicio" step="1800" /></label>
+            <label class="campo"><span>Até</span><input type="time" id="pausa-fim" step="1800" /></label>
+          </div>
+        </div>
+        <div class="cartao formulario">
+          <label class="campo"><span>Frase do site</span><input type="text" id="slogan" maxlength="120" /></label>
+          <label class="campo"><span>Endereço (opcional, aparece no rodapé)</span><input type="text" id="endereco" maxlength="160" /></label>
+        </div>
+        <div class="salvar">
+          <p class="erro" id="erro-horarios" role="alert"></p>
+          <button class="botao" id="salvar-horarios" type="button">Salvar horários <i>→</i></button>
+        </div>
+      </div>
+
+      <!-- AVISOS -->
+      <div class="aba" data-aba="avisos" hidden>
+        <div class="aba__topo">
+          <div>
+            <span class="rotulo">Notificação no celular</span>
+            <h2>Avisos de agendamento</h2>
+          </div>
+        </div>
+        <div id="conteudo-avisos"></div>
+      </div>
     </section>
   </main>
 
+  <div class="toasts" id="toasts" aria-live="polite"></div>
   <script src="/js/admin.js"></script>
 </body>
 </html>

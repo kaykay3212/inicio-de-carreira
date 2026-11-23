@@ -1,26 +1,24 @@
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
-const brl = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const brl = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const duracaoTexto = (min) => (min >= 60 ? `${Math.floor(min / 60)}h${min % 60 ? String(min % 60).padStart(2, '0') : ''}` : `${min} min`);
-const dataLonga = (iso) =>
-  new Date(iso + 'T12:00:00Z').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', timeZone: 'UTC' });
+const dataLonga = (iso) => new Date(iso + 'T12:00:00Z').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', timeZone: 'UTC' });
 const linkWhats = (numero, texto) => `https://wa.me/${numero}${texto ? '?text=' + encodeURIComponent(texto) : ''}`;
 const menosMovimento = matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-const ICONES = { alongamento: '🌸', gel: '💎', 'manutencao-retorno': '🔁', manutencao: '✨' };
+const temMouse = matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 function el(tag, attrs = {}, ...filhos) {
   const e = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
+    if (v === undefined || v === null || v === false) continue;
     if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
     else if (k === 'style') Object.entries(v).forEach(([p, val]) => e.style.setProperty(p, val));
-    else e.setAttribute(k, v);
+    else e.setAttribute(k, v === true ? '' : v);
   }
   e.append(...filhos);
   return e;
 }
 
-// Rola suavemente até um elemento, só na vertical
 function rolarAte(elemento, bloco = 'nearest') {
   setTimeout(() => elemento.scrollIntoView({ behavior: menosMovimento ? 'auto' : 'smooth', block: bloco, inline: 'nearest' }), 120);
 }
@@ -44,234 +42,160 @@ async function buscarJson(url, opcoes = {}, { tentativas = 1, limite = 15000 } =
   }
 }
 
-let config;
-const escolha = { servico: null, data: null, hora: null };
-
-// =============================================================== ABERTURA
-const abertura = $('#abertura');
-const inicioAbertura = performance.now();
-function fecharAbertura() {
-  const espera = Math.max(0, 1500 - (performance.now() - inicioAbertura));
-  setTimeout(() => {
-    abertura.classList.add('sair');
-    animarTitulo();
-    setTimeout(() => abertura.remove(), 700);
-  }, menosMovimento ? 0 : espera);
-}
-
-// =============================================================== AVISOS (toasts)
 function aviso(texto) {
   const t = el('div', { class: 'toast' }, texto);
   $('#toasts').append(t);
   setTimeout(() => {
     t.classList.add('sair');
-    t.addEventListener('animationend', () => t.remove());
+    setTimeout(() => t.remove(), 450);
   }, 2800);
 }
 
-// =============================================================== EFEITO DE ONDA AO TOCAR
-document.addEventListener('pointerdown', (e) => {
-  const alvo = e.target.closest('.botao, .opcao, .dia, .hora, .servico, .escolhido__trocar');
-  if (!alvo || menosMovimento) return;
-  const r = alvo.getBoundingClientRect();
-  const tam = Math.max(r.width, r.height);
-  const onda = el('span', { class: 'onda', style: { width: tam + 'px', height: tam + 'px', left: e.clientX - r.left - tam / 2 + 'px', top: e.clientY - r.top - tam / 2 + 'px' } });
-  if (getComputedStyle(alvo).position === 'static') alvo.style.position = 'relative';
-  alvo.style.overflow = 'hidden';
-  alvo.append(onda);
-  onda.addEventListener('animationend', () => onda.remove());
-});
+let config;
+const escolha = { servico: null, data: null, hora: null };
 
 // =============================================================== REVELAR AO ROLAR
-const observadorRevelar = new IntersectionObserver(
-  (entradas) => {
-    entradas.forEach((e) => {
-      if (!e.isIntersecting) return;
-      e.target.classList.add('visivel');
-      observadorRevelar.unobserve(e.target);
-    });
-  },
-  { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
+const observador = new IntersectionObserver(
+  (entradas) => entradas.forEach((e) => {
+    if (!e.isIntersecting) return;
+    e.target.classList.add('visivel');
+    observador.unobserve(e.target);
+  }),
+  { threshold: 0.12, rootMargin: '0px 0px -30px 0px' }
 );
-const revelar = (elementos) => elementos.forEach((e) => observadorRevelar.observe(e));
+const revelar = (lista) => lista.forEach((e) => observador.observe(e));
 
-// Títulos das seções: cada palavra sobe
+// títulos: cada palavra sobe
 function prepararTitulos() {
-  $$('.titulo-secao').forEach((titulo) => {
+  $$('.titulo-revelar').forEach((titulo) => {
     let i = 0;
     const quebrar = (no) => {
       [...no.childNodes].forEach((filho) => {
-        if (filho.nodeType === 3) {
-          const partes = filho.textContent.split(/(\s+)/);
-          const frag = document.createDocumentFragment();
-          partes.forEach((p) => {
-            if (!p) return;
-            if (/^\s+$/.test(p)) return frag.append(' ');
-            frag.append(el('span', { class: 'palavra' }, el('span', { style: { '--atraso': `${i++ * 0.08}s` } }, p)));
-          });
-          filho.replaceWith(frag);
-        } else quebrar(filho);
+        if (filho.nodeType !== 3) return quebrar(filho);
+        const frag = document.createDocumentFragment();
+        filho.textContent.split(/(\s+)/).forEach((p) => {
+          if (!p) return;
+          if (/^\s+$/.test(p)) return frag.append(' ');
+          frag.append(el('span', { class: 'palavra' }, el('span', { style: { '--atraso': `${i++ * 0.07}s` } }, p)));
+        });
+        filho.replaceWith(frag);
       });
     };
     quebrar(titulo);
   });
-  revelar($$('.titulo-secao'));
+  revelar($$('.titulo-revelar'));
 }
 
-// =============================================================== TOPO, PROGRESSO E MENU
+// =============================================================== TOPO, MENU, BARRA DO CELULAR
 const topo = $('#topo');
-const barraProgresso = $('#progresso-scroll');
 const barraCelular = $('#barra-celular');
+let ultimoY = 0;
+let pendente = false;
 function aoRolar() {
+  pendente = false;
   const y = scrollY;
-  topo.classList.toggle('topo--rolado', y > 30);
-  const total = document.documentElement.scrollHeight - innerHeight;
-  barraProgresso.style.transform = `scaleX(${total > 0 ? y / total : 0})`;
-  // barra do celular aparece depois do topo e some na área de agendamento
-  const agendar = $('#agendar').getBoundingClientRect();
-  const naAgenda = agendar.top < innerHeight * 0.6 && agendar.bottom > innerHeight * 0.3;
-  barraCelular.classList.toggle('visivel', y > innerHeight * 0.7 && !naAgenda);
+  // esconde o topo ao descer e mostra ao subir
+  topo.classList.toggle('topo--escondido', y > 300 && y > ultimoY && !menuAberto);
+  ultimoY = y;
+  const agenda = $('#agendar').getBoundingClientRect();
+  const naAgenda = agenda.top < innerHeight * 0.6 && agenda.bottom > innerHeight * 0.3;
+  barraCelular.classList.toggle('visivel', y > innerHeight * 0.6 && !naAgenda);
+  desenharFita();
 }
-addEventListener('scroll', aoRolar, { passive: true });
+addEventListener('scroll', () => {
+  if (!pendente) {
+    pendente = true;
+    requestAnimationFrame(aoRolar);
+  }
+}, { passive: true });
 
-const indicador = $('#menu-indicador');
-const linksMenu = $$('#menu a');
-function moverIndicador(link) {
-  if (!link) return (indicador.style.opacity = 0);
-  indicador.style.opacity = 1;
-  indicador.style.width = link.offsetWidth + 'px';
-  indicador.style.transform = `translateX(${link.offsetLeft}px)`;
-}
-const observadorSecoes = new IntersectionObserver(
-  (entradas) => {
-    entradas.forEach((e) => {
-      if (!e.isIntersecting) return;
-      const link = linksMenu.find((a) => a.getAttribute('href') === '#' + e.target.id);
-      linksMenu.forEach((a) => a.classList.toggle('ativo', a === link));
-      moverIndicador(link);
-    });
-  },
-  { rootMargin: '-45% 0px -50% 0px' }
-);
-$$('main > section').forEach((s) => observadorSecoes.observe(s));
-
-// Menu do celular
+let menuAberto = false;
+const menu = $('#menu');
 const menuBotao = $('#menu-botao');
-const menuMobile = $('#menu-mobile');
 function alternarMenu(abrir) {
+  menuAberto = abrir;
   menuBotao.setAttribute('aria-expanded', String(abrir));
-  menuBotao.setAttribute('aria-label', abrir ? 'Fechar menu' : 'Abrir menu');
+  $('.menu-rotulo', menuBotao).textContent = abrir ? 'Fechar' : 'Menu';
   document.body.style.overflow = abrir ? 'hidden' : '';
   if (abrir) {
-    menuMobile.hidden = false;
-    $$('nav a', menuMobile).forEach((a, i) => (a.style.transitionDelay = `${0.15 + i * 0.06}s`));
-    requestAnimationFrame(() => requestAnimationFrame(() => menuMobile.classList.add('aberto')));
+    menu.hidden = false;
+    $$('nav a', menu).forEach((a, i) => (a.style.transitionDelay = `${0.05 + i * 0.05}s`));
+    requestAnimationFrame(() => requestAnimationFrame(() => menu.classList.add('aberto')));
   } else {
-    menuMobile.classList.remove('aberto');
-    $$('nav a', menuMobile).forEach((a) => (a.style.transitionDelay = '0s'));
-    setTimeout(() => !menuMobile.classList.contains('aberto') && (menuMobile.hidden = true), 600);
+    menu.classList.remove('aberto');
+    $$('nav a', menu).forEach((a) => (a.style.transitionDelay = '0s'));
+    setTimeout(() => !menuAberto && (menu.hidden = true), 400);
   }
 }
-menuBotao.addEventListener('click', () => alternarMenu(menuBotao.getAttribute('aria-expanded') !== 'true'));
-$$('a', menuMobile).forEach((a) => a.addEventListener('click', () => alternarMenu(false)));
+menuBotao.addEventListener('click', () => alternarMenu(!menuAberto));
+$$('a', menu).forEach((a) => a.addEventListener('click', () => alternarMenu(false)));
 
-// =============================================================== HERO
-function animarTitulo() {
-  const palavras = $$('#titulo .linha > span, #titulo em > span');
-  palavras.forEach((p, i) => (p.style.transitionDelay = `${0.1 + i * 0.09}s`));
-  $('#titulo').classList.add('ativo');
-  $$('.hero .revelar').forEach((e, i) => e.style.setProperty('--atraso', `${0.45 + i * 0.12}s`));
-  revelar($$('.hero .revelar'));
+// =============================================================== FITA DESENHADA NA ROLAGEM
+const fita = $('#fita-caminho');
+let comprimentoFita = 0;
+function prepararFita() {
+  comprimentoFita = fita.getTotalLength();
+  fita.style.strokeDasharray = comprimentoFita;
+  desenharFita();
+}
+function desenharFita() {
+  if (!comprimentoFita) return;
+  const r = $('#fita').getBoundingClientRect();
+  const progresso = Math.min(Math.max((innerHeight * 0.85 - r.top) / (r.height * 0.85), 0), 1);
+  fita.style.strokeDashoffset = comprimentoFita * (1 - progresso);
 }
 
-// Números contando
-function contar(elemento, fim) {
-  if (menosMovimento) return (elemento.textContent = fim);
-  const inicio = performance.now();
-  const duracao = 1400;
-  (function passo(t) {
-    const p = Math.min((t - inicio) / duracao, 1);
-    elemento.textContent = Math.round(fim * (1 - Math.pow(1 - p, 3)));
-    if (p < 1) requestAnimationFrame(passo);
-  })(inicio);
-}
-function prepararNumeros(valores) {
-  const caixa = $('#numeros');
-  const obs = new IntersectionObserver(([e]) => {
-    if (!e.isIntersecting) return;
-    obs.disconnect();
-    setTimeout(() => $$('[data-contar]', caixa).forEach((d) => contar(d, valores[d.dataset.contar] || 0)), 900);
-  });
-  obs.observe(caixa);
-}
-
-// Brilhinhos subindo no fundo
-function brilhos() {
-  const canvas = $('#brilhos');
-  if (menosMovimento) return;
-  const ctx = canvas.getContext('2d');
-  let w, h, pontos;
-  const dpr = Math.min(devicePixelRatio || 1, 2);
-  const novoPonto = (inicio) => ({ x: Math.random() * w, y: inicio ? Math.random() * h : h + 10, r: Math.random() * 1.6 + 0.4, v: Math.random() * 0.35 + 0.1, fase: Math.random() * Math.PI * 2, cor: Math.random() > 0.6 ? '241,201,122' : '255,140,200' });
-  function ajustar() {
-    w = canvas.offsetWidth; h = canvas.offsetHeight;
-    canvas.width = w * dpr; canvas.height = h * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    pontos = Array.from({ length: Math.round((w * h) / 22000) }, () => novoPonto(true));
-  }
-  let visivel = true;
-  new IntersectionObserver(([e]) => (visivel = e.isIntersecting)).observe(canvas);
-  function desenhar(t) {
-    if (visivel) {
-      ctx.clearRect(0, 0, w, h);
-      pontos.forEach((p, i) => {
-        p.y -= p.v;
-        if (p.y < -10) pontos[i] = novoPonto(false);
-        const a = 0.35 + Math.sin(t / 500 + p.fase) * 0.35;
-        ctx.beginPath();
-        ctx.fillStyle = `rgba(${p.cor},${Math.max(a, 0)})`;
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = `rgba(${p.cor},1)`;
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
-      });
+// =============================================================== CURSOR (computador)
+function prepararCursor() {
+  const cursor = $('#cursor');
+  if (!temMouse || menosMovimento) return;
+  const texto = $('.cursor__texto', cursor);
+  let x = innerWidth / 2, y = innerHeight / 2, cx = x, cy = y, ativo = false;
+  addEventListener('pointermove', (e) => {
+    x = e.clientX;
+    y = e.clientY;
+    if (!ativo) {
+      ativo = true;
+      requestAnimationFrame(mover);
     }
-    requestAnimationFrame(desenhar);
+  }, { passive: true });
+  function mover() {
+    cx += (x - cx) * 0.22;
+    cy += (y - cy) * 0.22;
+    cursor.style.transform = `translate3d(${cx}px, ${cy}px, 0)`;
+    if (Math.abs(x - cx) + Math.abs(y - cy) > 0.3) requestAnimationFrame(mover);
+    else ativo = false;
   }
-  ajustar();
-  let largura = innerWidth;
-  addEventListener('resize', () => innerWidth !== largura && ((largura = innerWidth), ajustar()));
-  requestAnimationFrame(desenhar);
+  document.addEventListener('pointerover', (e) => {
+    const alvo = e.target.closest('[data-cursor]');
+    const link = e.target.closest('a, button, [role=button]');
+    cursor.classList.toggle('com-texto', Boolean(alvo));
+    cursor.classList.toggle('sobre-link', Boolean(link) && !alvo);
+    if (alvo) texto.textContent = alvo.dataset.cursor;
+  });
 }
 
 // =============================================================== INICIALIZAÇÃO
 (async function iniciar() {
+  fetch('/api/aquecer').catch(() => {}); // acorda o banco antes da cliente escolher o horário
   prepararTitulos();
-  brilhos();
-  revelar($$('main > section:not(.hero) .revelar'));
-  revelar([$('#como')]);
+  revelar($$('.revelar'));
+  prepararFita();
+  prepararCursor();
   aoRolar();
 
-  fetch('/api/aquecer').catch(() => {}); // acorda o banco antes da cliente escolher o horário
   try {
     config = await fetch('/api/config').then((r) => r.json());
   } catch {
-    fecharAbertura();
     return aviso('Não foi possível carregar o site. Atualize a página.');
   }
-  document.title = `${config.nome} | Agende seu horário`;
-  $$('[data-nome]').forEach((e) => (e.textContent = config.nome));
-  $('[data-slogan]').textContent = config.slogan;
-  $('[data-endereco]').textContent = config.endereco || `@${config.instagram}`;
   $('#ano').textContent = new Date().getFullYear();
-  const whats = linkWhats(config.whatsapp, `Olá! Vim pelo seu site e quero agendar um horário 💅`);
-  $$('[data-whats]').forEach((a) => (a.href = whats));
-  $('#link-insta').href = `https://instagram.com/${config.instagram}`;
-
+  if (config.slogan) $('[data-slogan]').textContent = config.slogan;
+  $('[data-endereco]').textContent = config.endereco || `@${config.instagram}`;
+  $$('[data-whats]').forEach((a) => (a.href = linkWhats(config.whatsapp, 'Olá! Vim pelo seu site e quero agendar um horário 💅')));
+  $$('[data-insta]').forEach((a) => (a.href = `https://instagram.com/${config.instagram}`));
   montarServicos();
-  await carregarGaleria();
-  prepararNumeros({ servicos: config.servicos.length, fotos: fotos.length, preco: Math.min(...config.servicos.map((s) => s.preco)) });
-  fecharAbertura();
+  carregarGaleria();
 })();
 
 // =============================================================== GALERIA
@@ -283,45 +207,36 @@ async function carregarGaleria() {
     fotos = [];
   }
   const galeria = $('#galeria');
-  if (!fotos.length) {
-    galeria.replaceWith(el('p', { class: 'galeria__vazia' }, 'Em breve, fotos dos nossos trabalhos por aqui!'));
-    return;
-  }
+  if (!fotos.length) return galeria.replaceWith(el('p', { class: 'micro' }, 'Em breve, fotos dos trabalhos por aqui.'));
   fotos.forEach((f, i) => {
-    const img = el('img', { src: f.url, alt: f.legenda, loading: 'lazy' });
-    const marcarCarregada = () => img.classList.add('carregada');
-    img.complete ? marcarCarregada() : img.addEventListener('load', marcarCarregada);
+    const img = el('img', { src: f.url, alt: f.legenda, loading: i < 2 ? 'eager' : 'lazy', decoding: 'async' });
+    const pronta = () => img.classList.add('carregada');
+    img.complete ? pronta() : img.addEventListener('load', pronta);
     galeria.append(
-      el('button', { class: 'galeria__item', type: 'button', onclick: () => abrirLightbox(i), style: { '--atraso': `${(i % 3) * 0.12}s` } },
-        img,
-        el('span', { class: 'legenda' }, f.legenda, el('b', {}, 'Ver ⤢')))
+      el('button', { class: 'card', type: 'button', 'data-cursor': 'Ver', onclick: () => abrirLightbox(i) },
+        el('div', { class: 'card__img' }, img),
+        el('div', { class: 'card__rodape' },
+          el('span', { class: 'card__titulo' }, f.legenda),
+          el('span', { class: 'micro' }, String(i + 1).padStart(2, '0'))))
     );
   });
-  revelar($$('.galeria__item'));
-
-  $$('.hero__foto').forEach((div, i) => (div.style.backgroundImage = `url("${fotos[i % fotos.length].url}")`));
-  await new Promise((ok) => {
-    const primeira = new Image();
-    primeira.onload = primeira.onerror = ok;
-    primeira.src = fotos[0].url;
-    setTimeout(ok, 2500);
-  });
-  $('#hero-fotos').classList.add('ativo');
+  revelar($$('.card'));
+  $('#hero-fallback').style.backgroundImage = `url("${fotos[0].url}")`;
 }
 
-// Lightbox com setas, teclado e arrastar no celular
+// Lightbox: setas, teclado, arrastar para o lado (trocar) e para baixo (fechar)
 let fotoAtual = 0;
 const lightbox = $('#lightbox');
 const imgLightbox = $('img', lightbox);
-function abrirLightbox(i, direcao) {
+function abrirLightbox(i, trocando) {
   fotoAtual = (i + fotos.length) % fotos.length;
-  imgLightbox.classList.remove('trocando-esq', 'trocando-dir');
+  imgLightbox.classList.remove('trocando');
   void imgLightbox.offsetWidth;
-  if (direcao) imgLightbox.classList.add(direcao < 0 ? 'trocando-esq' : 'trocando-dir');
+  if (trocando) imgLightbox.classList.add('trocando');
   imgLightbox.src = fotos[fotoAtual].url;
   imgLightbox.alt = fotos[fotoAtual].legenda;
   $('.lightbox__legenda').textContent = fotos[fotoAtual].legenda;
-  $('.lightbox__contador').textContent = `${fotoAtual + 1} / ${fotos.length}`;
+  $('.lightbox__contador').textContent = `${String(fotoAtual + 1).padStart(2, '0')} / ${String(fotos.length).padStart(2, '0')}`;
   lightbox.hidden = false;
   document.body.style.overflow = 'hidden';
 }
@@ -329,14 +244,14 @@ function fecharLightbox() {
   lightbox.hidden = true;
   document.body.style.overflow = '';
 }
-const anterior = () => abrirLightbox(fotoAtual - 1, -1);
-const proxima = () => abrirLightbox(fotoAtual + 1, 1);
+const anterior = () => abrirLightbox(fotoAtual - 1, true);
+const proxima = () => abrirLightbox(fotoAtual + 1, true);
 $('.lightbox__fechar').onclick = fecharLightbox;
 $('.lightbox__nav--ant').onclick = anterior;
 $('.lightbox__nav--prox').onclick = proxima;
 lightbox.addEventListener('click', (e) => (e.target === lightbox || e.target.tagName === 'FIGURE') && fecharLightbox());
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && menuBotao.getAttribute('aria-expanded') === 'true') alternarMenu(false);
+  if (e.key === 'Escape' && menuAberto) alternarMenu(false);
   if (lightbox.hidden) return;
   if (e.key === 'Escape') fecharLightbox();
   if (e.key === 'ArrowLeft') anterior();
@@ -349,7 +264,7 @@ lightbox.addEventListener('touchend', (e) => {
   const dx = e.changedTouches[0].clientX - toqueX;
   const dy = e.changedTouches[0].clientY - toqueY;
   if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) (dx > 0 ? anterior : proxima)();
-  else if (dy > 90) fecharLightbox(); // arrastar para baixo fecha
+  else if (dy > 90) fecharLightbox();
   toqueX = toqueY = null;
 });
 
@@ -368,32 +283,27 @@ $('#quero-estilo').addEventListener('click', () => {
 function montarServicos() {
   const lista = $('#lista-servicos');
   const opcoes = $('#opcoes-servico');
+  lista.replaceChildren();
+  opcoes.replaceChildren();
   config.servicos.forEach((s, i) => {
-    const cartao = el('article', { class: 'servico revelar', tabindex: '0', role: 'button', 'aria-label': `Agendar ${s.nome}`, style: { '--atraso': `${(i % 4) * 0.08}s` } },
-      el('span', { class: 'servico__icone' }, ICONES[s.id] || '💅'),
-      el('span', { class: 'servico__agendar' }, 'Agendar →'),
-      el('h3', {}, s.nome),
-      el('p', {}, s.descricao),
-      el('div', { class: 'servico__rodape' },
-        el('span', { class: 'servico__preco' }, brl(s.preco)),
-        el('span', { class: 'servico__tempo' }, '⏱ ' + duracaoTexto(s.duracao))));
     const agendarEste = () => {
       escolherServico(s, false);
       rolarAte($('#agendar'), 'start');
     };
-    cartao.addEventListener('click', agendarEste);
-    cartao.addEventListener('keydown', (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), agendarEste()));
-    cartao.addEventListener('mousemove', (e) => {
-      const r = cartao.getBoundingClientRect();
-      cartao.style.setProperty('--x', `${e.clientX - r.left}px`);
-      cartao.style.setProperty('--y', `${e.clientY - r.top}px`);
-    });
-    lista.append(cartao);
+    const linha = el('li', { class: 'servico revelar', tabindex: '0', role: 'button', 'aria-label': `Agendar ${s.nome}, ${brl(s.preco)}`, 'data-cursor': 'Agendar', style: { '--atraso': `${i * 0.06}s` } },
+      el('span', { class: 'servico__num' }, String(i + 1).padStart(2, '0')),
+      el('span', { class: 'servico__nome' }, s.nome, s.descricao ? el('small', { class: 'servico__desc' }, s.descricao) : ''),
+      el('span', { class: 'servico__tempo' }, duracaoTexto(s.duracao)),
+      el('span', { class: 'servico__preco' }, brl(s.preco)),
+      el('span', { class: 'servico__seta', 'aria-hidden': 'true' }, '→'));
+    linha.addEventListener('click', agendarEste);
+    linha.addEventListener('keydown', (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), agendarEste()));
+    lista.append(linha);
 
     opcoes.append(
       el('button', { class: 'opcao', type: 'button', 'aria-pressed': 'false', 'data-id': s.id, style: { '--atraso': `${i * 0.04}s` }, onclick: () => escolherServico(s) },
-        el('strong', {}, `${ICONES[s.id] || '💅'} ${s.nome}`),
-        el('small', {}, `${brl(s.preco)} • ${duracaoTexto(s.duracao)}`))
+        el('span', {}, el('strong', {}, s.nome), el('small', {}, duracaoTexto(s.duracao))),
+        el('b', {}, brl(s.preco)))
     );
   });
   revelar($$('.servico'));
@@ -403,13 +313,11 @@ function montarServicos() {
 function marcar(container, seletor, valor, atributo) {
   $$(seletor, container).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset[atributo] === valor)));
 }
-
 function atualizarEtapas() {
   const etapa = escolha.hora ? 4 : escolha.data ? 3 : escolha.servico ? 2 : 1;
   $$('#etapas li').forEach((li, i) => li.classList.toggle('ativa', i < etapa));
-  $('#etapas-barra').style.transform = `scaleX(${(etapa - 1) / 3})`;
+  $('#etapas-barra').style.transform = `scaleX(${etapa / 4})`;
 }
-
 function mostrarServicoEscolhido(mostrar) {
   $('#servico-escolhido').hidden = !mostrar;
   $('#opcoes-servico').hidden = mostrar;
@@ -419,11 +327,9 @@ function escolherServico(s, rolar = true) {
   escolha.servico = s;
   escolha.hora = null;
   marcar($('#opcoes-servico'), '.opcao', s.id, 'id');
-  $('#escolhido-icone').textContent = ICONES[s.id] || '💅';
   $('#escolhido-nome').textContent = s.nome;
-  $('#escolhido-info').textContent = `${brl(s.preco)} • ${duracaoTexto(s.duracao)}`;
-  // pequena pausa para ver a seleção antes de resumir
-  setTimeout(() => mostrarServicoEscolhido(true), rolar ? 280 : 0);
+  $('#escolhido-info').textContent = `${brl(s.preco)} · ${duracaoTexto(s.duracao)}`;
+  setTimeout(() => mostrarServicoEscolhido(true), rolar ? 250 : 0);
   montarDias();
   $('#passo-data').hidden = false;
   $('#passo-dados').hidden = true;
@@ -441,6 +347,7 @@ function montarDias() {
   if (dias.childElementCount) return;
   const semana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const fechados = new Set(config.diasFechados || []);
   const base = new Date(config.hoje + 'T12:00:00Z');
   let n = 0;
   for (let i = 0; i <= config.diasAntecedencia; i++) {
@@ -448,11 +355,12 @@ function montarDias() {
     d.setUTCDate(base.getUTCDate() + i);
     if (!config.horarios[d.getUTCDay()]) continue;
     const iso = d.toISOString().slice(0, 10);
+    const fechado = fechados.has(iso);
     dias.append(
-      el('button', { class: 'dia', type: 'button', 'aria-pressed': 'false', 'data-data': iso, style: { '--atraso': `${Math.min(n++, 8) * 0.04}s` }, onclick: () => escolherDia(iso) },
+      el('button', { class: 'dia', type: 'button', 'aria-pressed': 'false', 'data-data': iso, disabled: fechado, title: fechado ? 'Fechado' : undefined, style: { '--atraso': `${Math.min(n++, 8) * 0.04}s` }, onclick: () => escolherDia(iso) },
         el('span', {}, i === 0 ? 'Hoje' : i === 1 ? 'Amanhã' : semana[d.getUTCDay()]),
         el('strong', {}, String(d.getUTCDate())),
-        el('span', {}, meses[d.getUTCMonth()]))
+        el('span', {}, fechado ? 'fechado' : meses[d.getUTCMonth()]))
     );
   }
 }
@@ -475,9 +383,8 @@ async function carregarHorarios(rolar) {
   if (rolar) rolarAte($('#passo-hora'), 'center');
   const pedido = `${escolha.servico.id}|${escolha.data}`;
   const aindaValido = () => pedido === `${escolha.servico?.id}|${escolha.data}`;
-  // se demorar, avisa que está buscando (a agenda pode estar "acordando")
   const avisoDemora = setTimeout(() => {
-    if (aindaValido() && horas.querySelector('.carregando')) horas.append(el('p', { class: 'aviso aviso--espera' }, '⏳ Buscando os horários livres, só um instante...'));
+    if (aindaValido() && $('.carregando', horas)) horas.append(el('p', { class: 'aviso aviso--espera' }, 'Buscando os horários livres, só um instante…'));
   }, 2500);
   let horarios = [];
   try {
@@ -487,25 +394,17 @@ async function carregarHorarios(rolar) {
     if (!aindaValido()) return;
     horas.replaceChildren(
       el('div', { class: 'falha' },
-        el('p', {}, '😕 Não conseguimos carregar os horários agora.'),
-        el('button', { class: 'botao botao--vidro botao--pequeno', type: 'button', onclick: () => carregarHorarios(false) }, '↻ Tentar de novo'),
-        el('a', { class: 'botao botao--whats botao--pequeno', href: linkWhats(config.whatsapp, `Olá! Quero agendar ${escolha.servico.nome} para ${dataLonga(escolha.data)}. Quais horários você tem?`), target: '_blank', rel: 'noopener' }, 'Agendar pelo WhatsApp'))
+        el('p', {}, 'Não conseguimos carregar os horários agora.'),
+        el('button', { class: 'pilula', type: 'button', onclick: () => carregarHorarios(false) }, '↻ Tentar de novo'),
+        el('a', { class: 'pilula pilula--whats', href: linkWhats(config.whatsapp, `Olá! Quero agendar ${escolha.servico.nome} para ${dataLonga(escolha.data)}. Quais horários você tem?`), target: '_blank', rel: 'noopener' }, 'Agendar pelo WhatsApp'))
     );
     return;
   }
   clearTimeout(avisoDemora);
-  if (!aindaValido()) return; // a cliente mudou a escolha no meio
+  if (!aindaValido()) return;
   horas.replaceChildren();
-  if (!horarios.length) {
-    horas.append(el('p', { class: 'aviso' }, 'Sem horários livres nesse dia 😢 Escolha outra data acima.'));
-    return;
-  }
-  // agrupa por período do dia
-  const grupos = [
-    ['☀️ Manhã', (h) => h < '12:00'],
-    ['🌤️ Tarde', (h) => h >= '12:00' && h < '18:00'],
-    ['🌙 Noite', (h) => h >= '18:00'],
-  ];
+  if (!horarios.length) return horas.append(el('p', { class: 'aviso' }, 'Sem horários livres nesse dia. Escolha outra data acima.'));
+  const grupos = [['Manhã', (h) => h < '12:00'], ['Tarde', (h) => h >= '12:00' && h < '18:00'], ['Noite', (h) => h >= '18:00']];
   let i = 0;
   grupos.forEach(([titulo, filtro]) => {
     const lista = horarios.filter(filtro);
@@ -514,7 +413,7 @@ async function carregarHorarios(rolar) {
       el('div', { class: 'horas-grupo' },
         el('h4', {}, titulo),
         el('div', { class: 'horas' },
-          ...lista.map((h) => el('button', { class: 'hora', type: 'button', 'aria-pressed': 'false', 'data-hora': h, style: { '--atraso': `${Math.min(i++, 15) * 0.03}s` }, onclick: () => escolherHora(h) }, h))))
+          ...lista.map((h) => el('button', { class: 'hora', type: 'button', 'aria-pressed': 'false', 'data-hora': h, style: { '--atraso': `${Math.min(i++, 15) * 0.025}s` }, onclick: () => escolherHora(h) }, h))))
     );
   });
 }
@@ -525,18 +424,14 @@ function escolherHora(h) {
   const passo = $('#passo-dados');
   const estavaOculto = passo.hidden;
   passo.hidden = false;
-  $('#resumo').replaceChildren(
-    el('strong', {}, `${ICONES[escolha.servico.id] || '💅'} ${escolha.servico.nome}`), ` • ${brl(escolha.servico.preco)}`, el('br'),
-    `📅 ${dataLonga(escolha.data)} às ${h}`
-  );
+  $('#resumo').replaceChildren(el('strong', {}, escolha.servico.nome), ` · ${brl(escolha.servico.preco)}`, el('br'), `${dataLonga(escolha.data)} às ${h}`);
   $('#erro').textContent = '';
   atualizarEtapas();
   if (estavaOculto) rolarAte(passo, 'center');
 }
 
-// depois que a animação de entrada termina, ela não se repete ao trocar a escolha
 $('#form-agendamento').addEventListener('animationend', (e) => {
-  if (e.animationName === 'item-entrar') e.target.classList.add('pronto');
+  if (e.animationName === 'subir' && e.target.matches('.opcao, .dia, .hora')) e.target.classList.add('pronto');
 });
 
 // máscara de telefone + ✓ quando o campo está certo
@@ -562,23 +457,21 @@ function erroCampo(input, mensagem) {
 
 $('#form-agendamento').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const form = e.target;
   const botao = $('#botao-confirmar');
   $('#erro').textContent = '';
-
   const dados = {
     servicoId: escolha.servico?.id,
     data: escolha.data,
     inicio: escolha.hora,
     nome: campoNome.value.trim(),
     telefone: campoTel.value,
-    observacoes: form.observacoes.value.trim(),
+    observacoes: e.target.observacoes.value.trim(),
   };
   if (!nomeOk()) return erroCampo(campoNome, 'Informe seu nome.');
   if (!telOk()) return erroCampo(campoTel, 'Informe seu WhatsApp com DDD.');
 
   botao.disabled = true;
-  botao.textContent = 'Reservando...';
+  $('span', botao).textContent = 'Reservando…';
   try {
     const { resp, corpo } = await buscarJson('/api/agendamentos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) }, { tentativas: 1, limite: 25000 });
     if (!resp.ok) {
@@ -591,14 +484,16 @@ $('#form-agendamento').addEventListener('submit', async (e) => {
     $('#erro').textContent = 'Não foi possível confirmar agora. Verifique sua internet e toque em confirmar de novo.';
   } finally {
     botao.disabled = false;
-    botao.textContent = 'Confirmar agendamento';
+    $('span', botao).textContent = 'Confirmar agendamento';
   }
 });
 
 function mostrarSucesso(ag) {
   const quando = `${dataLonga(ag.data)} às ${ag.inicio}`;
-  $('#sucesso-texto').textContent = `${ag.nome}, seu horário de ${ag.servicoNome} está reservado para ${quando}. Te esperamos! 💖`;
+  $('#sucesso-texto').textContent = `${ag.nome}, seu horário de ${ag.servicoNome} está reservado para ${quando}. Salve no calendário para receber o lembrete. 💖`;
   $('#sucesso-whats').href = linkWhats(config.whatsapp, `Olá! Acabei de agendar pelo site:\n💅 ${ag.servicoNome}\n📅 ${quando}\n👤 ${ag.nome}`);
+  $('#cal-google').href = ag.calendario?.google || '#';
+  $('#cal-ics').href = ag.calendario?.ics || '#';
   $('#form-agendamento').hidden = true;
   $('#sucesso').hidden = false;
   rolarAte($('#sucesso'), 'center');
@@ -618,18 +513,18 @@ $('#novo-agendamento').addEventListener('click', () => {
   rolarAte($('#agendar'), 'start');
 });
 
-// Confete de comemoração 🎉
+// Confete de comemoração
 function confete(canvas) {
   if (menosMovimento) return;
   const ctx = canvas.getContext('2d');
   const dpr = Math.min(devicePixelRatio || 1, 2);
   const w = canvas.offsetWidth, h = canvas.offsetHeight;
-  canvas.width = w * dpr; canvas.height = h * dpr;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const cores = ['#ff4d9d', '#a45bff', '#f1c97a', '#ffffff', '#ff8cc6'];
-  const pedacos = Array.from({ length: 140 }, () => ({
-    x: w / 2, y: h * 0.28,
-    vx: (Math.random() - 0.5) * 14, vy: Math.random() * -12 - 3,
+  const cores = ['#ff3d8b', '#a45bff', '#f2f1f4', '#e8b4a2'];
+  const pedacos = Array.from({ length: 110 }, () => ({
+    x: w / 2, y: h * 0.25, vx: (Math.random() - 0.5) * 13, vy: Math.random() * -11 - 3,
     tam: Math.random() * 7 + 4, giro: Math.random() * Math.PI, vg: (Math.random() - 0.5) * 0.3,
     cor: cores[(Math.random() * cores.length) | 0], vida: 1,
   }));
@@ -637,7 +532,7 @@ function confete(canvas) {
     ctx.clearRect(0, 0, w, h);
     let vivos = 0;
     pedacos.forEach((p) => {
-      p.vy += 0.32; p.vx *= 0.985; p.x += p.vx; p.y += p.vy; p.giro += p.vg; p.vida -= 0.006;
+      p.vy += 0.32; p.vx *= 0.985; p.x += p.vx; p.y += p.vy; p.giro += p.vg; p.vida -= 0.007;
       if (p.vida <= 0 || p.y > h + 20) return;
       vivos++;
       ctx.save();
