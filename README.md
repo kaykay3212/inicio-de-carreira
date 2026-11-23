@@ -1,4 +1,8 @@
-# 💅 Studio de Unhas — Site de Agendamento
+# 💅 Maya Souza Nails — Site de Agendamento
+
+🌐 **No ar:** https://maya-souza-nails.onrender.com · Painel: https://maya-souza-nails.onrender.com/admin
+
+O Render publica sozinho cada novo commit no branch `claude/manicure-scheduling-site-py7593`.
 
 Site para manicure com:
 

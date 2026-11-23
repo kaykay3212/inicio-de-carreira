@@ -1,7 +1,7 @@
 # Blueprint do Render: https://render.com/docs/blueprint-spec
 services:
   - type: web
-    name: studio-unhas
+    name: maya-souza-nails
     runtime: node
     plan: free
     buildCommand: npm install
