@@ -3,57 +3,93 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0c090e" />
   <title>Studio de Unhas | Agende seu horário</title>
   <meta name="description" content="Manicure, pedicure, gel, alongamento e nail art. Veja nossos trabalhos e agende online." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,500;1,700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <header class="topo">
+  <div class="progresso-scroll" id="progresso-scroll"></div>
+
+  <header class="topo" id="topo">
     <div class="container topo__conteudo">
-      <a href="#inicio" class="logo" data-nome>Studio</a>
-      <nav class="menu">
+      <a href="#inicio" class="logo"><span class="logo__ponto"></span><span data-nome>Studio</span></a>
+      <nav class="menu" id="menu">
         <a href="#trabalhos">Trabalhos</a>
         <a href="#servicos">Serviços</a>
-        <a href="#agendar" class="botao botao--pequeno">Agendar</a>
+        <a href="#agendar">Agendar</a>
+        <span class="menu__indicador" id="menu-indicador"></span>
       </nav>
+      <a href="#agendar" class="botao botao--pequeno botao--brilho">Agendar</a>
     </div>
   </header>
 
   <main>
     <!-- HERO -->
     <section id="inicio" class="hero">
+      <div class="hero__aurora" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+      <canvas class="hero__brilhos" id="brilhos" aria-hidden="true"></canvas>
+
       <div class="container hero__conteudo">
         <div class="hero__texto">
-          <span class="etiqueta">Manicure • Pedicure • Gel • Alongamento</span>
-          <h1>Unhas lindas<br /><em>que falam por você</em></h1>
-          <p data-slogan></p>
-          <div class="hero__botoes">
-            <a href="#agendar" class="botao">Agendar meu horário</a>
-            <a href="#trabalhos" class="botao botao--contorno">Ver trabalhos</a>
+          <span class="etiqueta revelar">Manicure • Gel • Alongamento • Nail Art</span>
+          <h1 class="titulo-animado" id="titulo">
+            <span class="linha"><span>Unhas</span> <span>que</span> <span>brilham</span></span>
+            <span class="linha"><em><span>do</span> <span>seu</span> <span>jeito</span></em></span>
+          </h1>
+          <p class="revelar" data-slogan></p>
+          <div class="hero__botoes revelar">
+            <a href="#agendar" class="botao botao--brilho">Agendar meu horário <span class="seta">→</span></a>
+            <a href="#trabalhos" class="botao botao--vidro">Ver trabalhos</a>
+          </div>
+          <ul class="hero__selos revelar">
+            <li><strong>⏱</strong> Agendamento em 1 minuto</li>
+            <li><strong>✦</strong> Produtos de qualidade</li>
+          </ul>
+        </div>
+
+        <div class="hero__fotos" id="hero-fotos" aria-hidden="true">
+          <div class="hero__foto hero__foto--1"></div>
+          <div class="hero__foto hero__foto--2"></div>
+          <div class="hero__foto hero__foto--3"></div>
+          <div class="hero__cartao-flutuante">
+            <span>💅</span>
+            <div><strong>Agenda online</strong><small>aberta 24h</small></div>
           </div>
         </div>
-        <div class="hero__fotos" id="hero-fotos" aria-hidden="true"></div>
       </div>
+      <a href="#trabalhos" class="hero__rolar" aria-label="Rolar para os trabalhos"><span></span></a>
     </section>
+
+    <!-- FAIXA ANIMADA -->
+    <div class="faixa" aria-hidden="true">
+      <div class="faixa__trilho" id="faixa"></div>
+    </div>
 
     <!-- GALERIA -->
     <section id="trabalhos" class="secao">
       <div class="container">
-        <span class="etiqueta">Portfólio</span>
-        <h2>Unhas que já passaram por aqui</h2>
-        <p class="secao__sub">Inspire-se e escolha o seu estilo. Toque na foto para ampliar.</p>
+        <div class="secao__cabecalho revelar">
+          <span class="etiqueta">Portfólio</span>
+          <h2>Unhas que já <em>passaram por aqui</em></h2>
+          <p class="secao__sub">Inspire-se e escolha o seu estilo. Toque na foto para ampliar.</p>
+        </div>
         <div class="galeria" id="galeria"></div>
       </div>
     </section>
 
     <!-- SERVIÇOS -->
-    <section id="servicos" class="secao secao--rosa">
+    <section id="servicos" class="secao secao--destaque">
       <div class="container">
-        <span class="etiqueta">Serviços</span>
-        <h2>Cuidados para todos os estilos</h2>
+        <div class="secao__cabecalho revelar">
+          <span class="etiqueta">Serviços</span>
+          <h2>Cuidados para <em>todos os estilos</em></h2>
+        </div>
         <div class="servicos" id="lista-servicos"></div>
       </div>
     </section>
@@ -61,51 +97,71 @@
     <!-- AGENDAMENTO -->
     <section id="agendar" class="secao">
       <div class="container container--estreito">
-        <span class="etiqueta">Agendamento online</span>
-        <h2>Reserve seu horário</h2>
-        <p class="secao__sub">Rapidinho: escolha o serviço, o dia e o horário. 💖</p>
+        <div class="secao__cabecalho revelar">
+          <span class="etiqueta">Agendamento online</span>
+          <h2>Reserve seu <em>horário</em></h2>
+          <p class="secao__sub">Escolha o serviço, o dia e o horário. Rapidinho! 💖</p>
+        </div>
 
-        <form id="form-agendamento" class="cartao agendamento" novalidate>
+        <form id="form-agendamento" class="cartao agendamento revelar" novalidate>
+          <ol class="etapas" id="etapas" aria-hidden="true">
+            <li class="ativa"><span>1</span>Serviço</li>
+            <li><span>2</span>Dia</li>
+            <li><span>3</span>Horário</li>
+            <li><span>4</span>Dados</li>
+            <i class="etapas__barra" id="etapas-barra"></i>
+          </ol>
+
           <div class="passo">
-            <h3><span class="passo__num">1</span> Serviço</h3>
+            <h3><span class="passo__num">1</span> Qual serviço?</h3>
             <div class="opcoes-servico" id="opcoes-servico"></div>
           </div>
 
           <div class="passo" id="passo-data" hidden>
-            <h3><span class="passo__num">2</span> Dia</h3>
-            <div class="dias" id="dias"></div>
+            <h3><span class="passo__num">2</span> Qual dia?</h3>
+            <div class="dias-moldura">
+              <button type="button" class="dias__seta dias__seta--esq" aria-label="Dias anteriores">‹</button>
+              <div class="dias" id="dias"></div>
+              <button type="button" class="dias__seta dias__seta--dir" aria-label="Próximos dias">›</button>
+            </div>
           </div>
 
           <div class="passo" id="passo-hora" hidden>
-            <h3><span class="passo__num">3</span> Horário</h3>
+            <h3><span class="passo__num">3</span> Qual horário?</h3>
             <div class="horas" id="horas"></div>
           </div>
 
           <div class="passo" id="passo-dados" hidden>
             <h3><span class="passo__num">4</span> Seus dados</h3>
             <div class="campos">
-              <label>Nome
-                <input type="text" name="nome" autocomplete="name" maxlength="80" required placeholder="Como podemos te chamar?" />
+              <label class="campo">
+                <input type="text" name="nome" autocomplete="name" maxlength="80" required placeholder=" " />
+                <span>Seu nome</span>
               </label>
-              <label>WhatsApp
-                <input type="tel" name="telefone" autocomplete="tel" inputmode="tel" required placeholder="(11) 98765-4321" />
+              <label class="campo">
+                <input type="tel" name="telefone" autocomplete="tel" inputmode="tel" required placeholder=" " />
+                <span>WhatsApp com DDD</span>
               </label>
-              <label class="campos__inteiro">Observações <small>(opcional)</small>
-                <textarea name="observacoes" rows="2" maxlength="300" placeholder="Ex.: quero uma francesinha com glitter ✨"></textarea>
+              <label class="campo campos__inteiro">
+                <textarea name="observacoes" rows="2" maxlength="300" placeholder=" "></textarea>
+                <span>Observações (opcional) — ex.: quero francesinha com glitter ✨</span>
               </label>
             </div>
             <div class="resumo" id="resumo"></div>
             <p class="erro" id="erro" role="alert"></p>
-            <button type="submit" class="botao botao--largo" id="botao-confirmar">Confirmar agendamento</button>
+            <button type="submit" class="botao botao--brilho botao--largo" id="botao-confirmar">Confirmar agendamento</button>
           </div>
         </form>
 
         <div class="cartao sucesso" id="sucesso" hidden>
-          <div class="sucesso__icone">💅</div>
+          <canvas class="sucesso__confete" id="confete" aria-hidden="true"></canvas>
+          <div class="sucesso__check" aria-hidden="true">
+            <svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" /><path d="M15 27l7 7 15-16" /></svg>
+          </div>
           <h3>Horário reservado!</h3>
           <p id="sucesso-texto"></p>
           <a class="botao botao--whats" id="sucesso-whats" target="_blank" rel="noopener">Avisar pelo WhatsApp</a>
-          <button class="botao botao--contorno" id="novo-agendamento" type="button">Fazer outro agendamento</button>
+          <button class="botao botao--vidro" id="novo-agendamento" type="button">Fazer outro agendamento</button>
         </div>
       </div>
     </section>
@@ -114,7 +170,7 @@
   <footer class="rodape">
     <div class="container rodape__conteudo">
       <div>
-        <strong class="logo" data-nome>Studio</strong>
+        <strong class="logo"><span class="logo__ponto"></span><span data-nome>Studio</span></strong>
         <p data-endereco></p>
       </div>
       <div class="rodape__links">
@@ -137,6 +193,7 @@
       <figcaption></figcaption>
     </figure>
     <button class="lightbox__nav lightbox__nav--prox" type="button" aria-label="Próxima">›</button>
+    <div class="lightbox__contador"></div>
   </div>
 
   <script src="/js/main.js"></script>

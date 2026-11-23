@@ -25,7 +25,7 @@ Site para manicure com:
 1. Apague as ilustrações de exemplo (`.svg`) da pasta `public/img/galeria/`.
 2. Coloque suas fotos (`.jpg`, `.png` ou `.webp`) nessa pasta.
 3. **O nome do arquivo vira a legenda**: `01-francesinha-rosa.jpg` aparece como "Francesinha rosa".
-   O número no começo serve só para definir a ordem (as 2 primeiras aparecem também no topo do site).
+   O número no começo serve só para definir a ordem (as 3 primeiras aparecem também no topo do site).
 4. Dica: use fotos em pé (retrato) e com até ~500 KB cada para o site ficar rápido.
 
 ## Rodando no computador
