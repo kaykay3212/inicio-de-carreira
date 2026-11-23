@@ -1,0 +1,21 @@
+# Blueprint do Render: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: studio-unhas
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      # senha do painel /admin (o Render gera uma aleatória; veja em Environment)
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      # Recomendado: cole aqui a "Internal/External Database URL" de um PostgreSQL
+      # para os agendamentos não se perderem quando o servidor reiniciar.
+      - key: DATABASE_URL
+        sync: false

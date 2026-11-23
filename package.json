@@ -1,0 +1,28 @@
+{
+  "name": "studio-unhas",
+  "version": "1.0.0",
+  "description": "Site de agendamento para manicure",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kaykay3212/inicio-de-carreira.git"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/kaykay3212/inicio-de-carreira/issues"
+  },
+  "homepage": "https://github.com/kaykay3212/inicio-de-carreira#readme",
+  "dependencies": {
+    "express": "^4.22.3",
+    "pg": "^8.23.1"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "private": true
+}
