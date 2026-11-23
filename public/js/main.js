@@ -25,6 +25,25 @@ function rolarAte(elemento, bloco = 'nearest') {
   setTimeout(() => elemento.scrollIntoView({ behavior: menosMovimento ? 'auto' : 'smooth', block: bloco, inline: 'nearest' }), 120);
 }
 
+// Busca JSON com limite de tempo; tenta de novo se a conexão falhar
+async function buscarJson(url, opcoes = {}, { tentativas = 1, limite = 15000 } = {}) {
+  for (let n = 1; ; n++) {
+    const controle = new AbortController();
+    const timer = setTimeout(() => controle.abort(), limite);
+    try {
+      const resp = await fetch(url, { ...opcoes, signal: controle.signal });
+      const corpo = await resp.json().catch(() => ({}));
+      if (resp.status >= 500) throw new Error(corpo.erro || 'Erro no servidor');
+      return { resp, corpo };
+    } catch (e) {
+      if (n >= tentativas) throw e;
+      await new Promise((ok) => setTimeout(ok, 800 * n));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+}
+
 let config;
 const escolha = { servico: null, data: null, hora: null };
 
@@ -233,6 +252,7 @@ function brilhos() {
   revelar([$('#como')]);
   aoRolar();
 
+  fetch('/api/aquecer').catch(() => {}); // acorda o banco antes da cliente escolher o horário
   try {
     config = await fetch('/api/config').then((r) => r.json());
   } catch {
@@ -454,14 +474,27 @@ async function carregarHorarios(rolar) {
   horas.replaceChildren(el('div', { class: 'carregando' }, ...Array.from({ length: 8 }, () => el('i'))));
   if (rolar) rolarAte($('#passo-hora'), 'center');
   const pedido = `${escolha.servico.id}|${escolha.data}`;
+  const aindaValido = () => pedido === `${escolha.servico?.id}|${escolha.data}`;
+  // se demorar, avisa que está buscando (a agenda pode estar "acordando")
+  const avisoDemora = setTimeout(() => {
+    if (aindaValido() && horas.querySelector('.carregando')) horas.append(el('p', { class: 'aviso aviso--espera' }, '⏳ Buscando os horários livres, só um instante...'));
+  }, 2500);
   let horarios = [];
   try {
-    ({ horarios = [] } = await fetch(`/api/horarios?data=${escolha.data}&servico=${escolha.servico.id}`).then((r) => r.json()));
+    ({ corpo: { horarios = [] } } = await buscarJson(`/api/horarios?data=${escolha.data}&servico=${escolha.servico.id}`, {}, { tentativas: 3, limite: 12000 }));
   } catch {
-    horas.replaceChildren(el('p', { class: 'aviso' }, 'Não foi possível carregar os horários. Tente novamente.'));
+    clearTimeout(avisoDemora);
+    if (!aindaValido()) return;
+    horas.replaceChildren(
+      el('div', { class: 'falha' },
+        el('p', {}, '😕 Não conseguimos carregar os horários agora.'),
+        el('button', { class: 'botao botao--vidro botao--pequeno', type: 'button', onclick: () => carregarHorarios(false) }, '↻ Tentar de novo'),
+        el('a', { class: 'botao botao--whats botao--pequeno', href: linkWhats(config.whatsapp, `Olá! Quero agendar ${escolha.servico.nome} para ${dataLonga(escolha.data)}. Quais horários você tem?`), target: '_blank', rel: 'noopener' }, 'Agendar pelo WhatsApp'))
+    );
     return;
   }
-  if (pedido !== `${escolha.servico.id}|${escolha.data}`) return; // a cliente mudou a escolha no meio
+  clearTimeout(avisoDemora);
+  if (!aindaValido()) return; // a cliente mudou a escolha no meio
   horas.replaceChildren();
   if (!horarios.length) {
     horas.append(el('p', { class: 'aviso' }, 'Sem horários livres nesse dia 😢 Escolha outra data acima.'));
@@ -547,8 +580,7 @@ $('#form-agendamento').addEventListener('submit', async (e) => {
   botao.disabled = true;
   botao.textContent = 'Reservando...';
   try {
-    const resp = await fetch('/api/agendamentos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
-    const corpo = await resp.json();
+    const { resp, corpo } = await buscarJson('/api/agendamentos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) }, { tentativas: 1, limite: 25000 });
     if (!resp.ok) {
       $('#erro').textContent = corpo.erro || 'Não foi possível agendar.';
       if (resp.status === 409) carregarHorarios(true);
@@ -556,7 +588,7 @@ $('#form-agendamento').addEventListener('submit', async (e) => {
     }
     mostrarSucesso(corpo);
   } catch {
-    $('#erro').textContent = 'Sem conexão. Tente novamente.';
+    $('#erro').textContent = 'Não foi possível confirmar agora. Verifique sua internet e toque em confirmar de novo.';
   } finally {
     botao.disabled = false;
     botao.textContent = 'Confirmar agendamento';

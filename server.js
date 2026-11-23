@@ -160,6 +160,12 @@ app.post('/api/admin/agendamentos/:id/cancelar', exigirAdmin, async (req, res, n
 
 app.get('/healthz', (req, res) => res.send('ok'));
 
+// chamado quando alguém abre o site: acorda o banco antes da cliente escolher o horário
+app.get('/api/aquecer', (req, res) => {
+  store.aquecer().catch((e) => console.warn('Aquecimento do banco falhou:', e.message));
+  res.status(204).end();
+});
+
 app.use((err, req, res, next) => {
   if (err.status && err.status < 500) return res.status(err.status).json({ erro: err.message });
   console.error(err);

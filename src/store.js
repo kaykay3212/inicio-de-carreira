@@ -35,6 +35,7 @@ function criarStoreJson(arquivo) {
 
   return {
     tipo: 'arquivo JSON',
+    async aquecer() {},
     async ativosNaData(data) {
       return ler().filter((a) => a.data === data && a.status === 'confirmado');
     },
@@ -70,10 +71,23 @@ function criarStoreJson(arquivo) {
 // ---------------------------------------------------------------- Postgres
 function criarStorePg(url) {
   const { Pool } = require('pg');
-  const ssl = /localhost|127\.0\.0\.1/.test(url) ? false : { rejectUnauthorized: false };
-  const pool = new Pool({ connectionString: url, ssl });
+  const local = /localhost|127\.0\.0\.1/.test(url);
+  // o SSL é configurado aqui; tiramos os parâmetros da URL para não conflitar
+  const u = new URL(url);
+  ['sslmode', 'channel_binding'].forEach((p) => u.searchParams.delete(p));
+  const pool = new Pool({
+    connectionString: u.toString(),
+    ssl: local ? false : { rejectUnauthorized: false },
+    max: 5,
+    idleTimeoutMillis: 30000, // fecha conexões paradas antes do banco grátis "dormir"
+    connectionTimeoutMillis: 15000, // nunca esperar para sempre por uma conexão
+    query_timeout: 20000, // nem por uma consulta
+    keepAlive: true,
+  });
+  // uma conexão que cai (ex.: banco dormiu) não pode derrubar o servidor
+  pool.on('error', (e) => console.error('Conexão com o banco caiu, será refeita:', e.message));
 
-  const pronto = pool.query(`
+  const SQL_TABELA = `
     CREATE TABLE IF NOT EXISTS agendamentos (
       id UUID PRIMARY KEY,
       servico_id TEXT NOT NULL,
@@ -88,7 +102,25 @@ function criarStorePg(url) {
       criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     CREATE INDEX IF NOT EXISTS agendamentos_data_idx ON agendamentos (data);
-  `);
+  `;
+  // cria a tabela uma vez; se falhar (banco acordando), tenta de novo na próxima chamada
+  let pronto = null;
+  const garantirTabela = () => (pronto ??= pool.query(SQL_TABELA).catch((e) => { pronto = null; throw e; }));
+
+  const erroDeConexao = (e) =>
+    /timeout|terminat|ECONNRESET|ECONNREFUSED|EPIPE|Connection|closed|ended/i.test(`${e.code || ''} ${e.message || ''}`);
+
+  // consulta com 1 nova tentativa automática se a conexão falhar
+  async function consultar(sql, params) {
+    await garantirTabela().catch(() => garantirTabela());
+    try {
+      return await pool.query(sql, params);
+    } catch (e) {
+      if (!erroDeConexao(e)) throw e;
+      console.warn('Nova tentativa após falha de conexão:', e.message);
+      return pool.query(sql, params);
+    }
+  }
 
   const paraObjeto = (r) => ({
     id: r.id,
@@ -106,24 +138,27 @@ function criarStorePg(url) {
 
   return {
     tipo: 'PostgreSQL',
+    // acorda o banco (o plano grátis "dorme" quando fica sem uso)
+    async aquecer() {
+      await consultar('SELECT 1');
+    },
     async ativosNaData(data) {
-      await pronto;
-      const { rows } = await pool.query(
+      const { rows } = await consultar(
         "SELECT * FROM agendamentos WHERE data = $1 AND status = 'confirmado'",
         [data]
       );
       return rows.map(paraObjeto);
     },
     async listar(aPartirDe) {
-      await pronto;
-      const { rows } = await pool.query(
+      const { rows } = await consultar(
         'SELECT * FROM agendamentos WHERE ($1::text IS NULL OR data >= $1) ORDER BY data, inicio',
         [aPartirDe || null]
       );
       return rows.map(paraObjeto);
     },
     async criar(ag) {
-      await pronto;
+      await garantirTabela();
+      await consultar('SELECT 1'); // garante o banco acordado antes da transação
       const cliente = await pool.connect();
       try {
         await cliente.query('BEGIN');
@@ -142,15 +177,14 @@ function criarStorePg(url) {
         await cliente.query('COMMIT');
         return paraObjeto(rows[0]);
       } catch (e) {
-        await cliente.query('ROLLBACK');
+        await cliente.query('ROLLBACK').catch(() => {});
         throw e;
       } finally {
         cliente.release();
       }
     },
     async cancelar(id) {
-      await pronto;
-      const { rows } = await pool.query(
+      const { rows } = await consultar(
         "UPDATE agendamentos SET status = 'cancelado' WHERE id = $1 RETURNING *",
         [id]
       );
