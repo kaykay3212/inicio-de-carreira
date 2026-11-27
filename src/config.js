@@ -38,11 +38,6 @@ module.exports = {
   // Pausa (almoço). Coloque null para não ter pausa.
   pausa: { inicio: '12:00', fim: '13:00' },
 
-  // Mantém o site acordado nesse horário (o plano grátis do Render "dorme" após 15 min sem visitas).
-  // Não use 24h: a cota grátis do Render (750 h/mês) é dividida entre todos os sites da conta.
-  // Coloque null para desligar.
-  manterAcordado: { inicio: '07:00', fim: '22:00' },
-
   // Serviços: duração em minutos, preço em reais
   servicos: [
     { id: 'alongamento', nome: 'Alongamento Soft Gel', descricao: 'Unhas longas, leves e resistentes com acabamento natural.', preco: 130, duracao: 120 },

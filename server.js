@@ -314,32 +314,9 @@ app.use((err, req, res, next) => {
   res.status(500).json({ erro: 'Ops! Algo deu errado. Tente novamente.' });
 });
 
-// ------------------------------------------------------------ manter acordado
-// O Render grátis desliga o site após 15 min sem visitas. Durante o horário configurado,
-// o próprio site se visita a cada 10 min pelo endereço público, o que conta como visita.
-function manterAcordado() {
-  const janela = config.manterAcordado;
-  if (!janela || !SITE_URL) return;
-  const dentroDoHorario = () => {
-    const { minutos } = agoraNoStudio();
-    return minutos >= paraMin(janela.inicio) && minutos < paraMin(janela.fim);
-  };
-  const visitar = async () => {
-    if (!dentroDoHorario()) return;
-    try {
-      await fetch(`${SITE_URL}/healthz`, { signal: AbortSignal.timeout(30000) });
-    } catch (e) {
-      console.warn('Manter acordado: visita falhou:', e.message);
-    }
-  };
-  setInterval(visitar, 10 * 60 * 1000);
-  console.log(`⏰ Mantendo o site acordado das ${janela.inicio} às ${janela.fim}`);
-}
-
 app.listen(PORT, () => {
   console.log(`💅 ${config.nome} rodando em http://localhost:${PORT} (armazenamento: ${store.tipo})`);
   console.log(avisos.ativo() ? '🔔 Avisos de novo agendamento ativos (ntfy)' : '🔕 Avisos desativados (defina NTFY_TOPICO)');
-  manterAcordado();
   if (!SENHA_ADMIN) console.warn('⚠️  Defina ADMIN_PASSWORD para acessar o painel /admin.');
   else if (!process.env.ADMIN_PASSWORD) console.warn('⚠️  Painel /admin usando senha padrão de desenvolvimento: admin123');
 });
